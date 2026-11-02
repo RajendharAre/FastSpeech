@@ -1,0 +1,57 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.pyc
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.venv/
+venv/
+env/
+
+# --- Tool and local clutter ---
+.DS_Store
+.vscode/
+.qoder/
+.idea/
+
+# --- Assignment documents (never redistributed) ---
+docs/*.pdf
+docs/source/
+
+# --- Data (never commit datasets, raw audio or preprocessed features) ---
+data/
+English/data/
+Telugu/data/
+raw_data/
+preprocessed_data/
+output/
+*.npy
+*.TextGrid
+
+# --- Training artefacts ---
+logs/
+English/logs/
+Telugu/logs/
+*.pth.tar
+events.out.tfevents.*
+*.pth.tar.zip.tmp
+
+# --- Vocoder: keep the zipped generator from the reference repo, ignore the
+# extracted file (recreate with: unzip hifigan/generator_universal.pth.tar.zip -d hifigan)
+English/hifigan/generator_universal.pth.tar
+Telugu/hifigan/generator_universal.pth.tar
+
+# --- Secrets ---
+.env
+.env.*
+*.token
+HF_TOKEN
+.huggingface/
+
+# --- Keep the required empty result folders ---
+!**/.gitkeep

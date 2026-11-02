@@ -1,0 +1,62 @@
+# Python dependencies for both language models.
+#
+# Target environment: Kaggle Linux, Python 3.12 (v173 image, 2026-10-30).
+# The same pins also have wheels for Python 3.10 and 3.11.
+#
+# The project code also runs on the author's Windows CPU machine for smoke
+# tests, but this file is not installable there on Python 3.14 (the pinned
+# NumPy has no cp314 wheel). The local audio tests and both smoke tests were
+# run in an isolated Python 3.11 environment with NumPy 2.0.2, SciPy 1.13.1,
+# librosa 0.10.2.post1, numba 0.60.0, pyworld 0.3.5 and torch 2.15.0+cpu.
+#
+# torch is supplied by Kaggle. Do not replace it with a CPU wheel on Kaggle;
+# record the exact Kaggle torch version in the technical report.
+#
+# pyworld 0.3.5 is source-only on Linux. Build it against the same NumPy that
+# will run, otherwise the extension can fail with an ABI mismatch. On Kaggle:
+#
+#   python -m pip install numpy==2.0.2 Cython==3.0.10 setuptools==69.5.1 wheel==0.43.0
+#   python -m pip install -r requirements.txt --no-build-isolation
+#
+# The first command installs the build tools; the second compiles pyworld
+# against NumPy 2.0.2. The first Kaggle run must confirm this and record the
+# result in CHANGES.md. It has NOT been run on Linux yet.
+
+# --- Core ---
+numpy==2.0.2
+scipy==1.13.1
+PyYAML==6.0.1
+tqdm==4.66.4
+matplotlib==3.9.2
+tensorboard==2.16.2
+
+# --- Audio / features (preprocessing) ---
+librosa==0.10.2.post1
+# Pin numba so librosa's JIT layer does not change between runs.
+numba==0.60.0
+soundfile==0.12.1
+pyworld==0.3.5
+scikit-learn==1.5.2
+
+# --- Forced alignment (Montreal Forced Aligner output is read via tgt) ---
+tgt==1.5
+
+# --- Text frontends ---
+unidecode==1.4.0
+inflect==7.6.0
+g2p_en==2.1.0
+pypinyin==0.52.0
+# g2p_en imports nltk at runtime but does not pin it.
+nltk==3.8.1
+
+# --- Dataset inspection / export ---
+datasets==2.20.0
+huggingface_hub==0.23.5
+
+# --- Tests ---
+pytest==8.2.2
+
+# --- Build tools (needed for pyworld source build) ---
+Cython==3.0.10
+setuptools==69.5.1
+wheel==0.43.0

@@ -114,7 +114,7 @@ def duration_stats(durations):
         "std": float(values.std(ddof=0)),
         "median": float(np.median(values)),
     }
-    for p in (1, 5, 25, 75, 95, 99):
+    for p in (1, 5, 25, 50, 75, 90, 95, 99):
         stats["p{}".format(p)] = float(np.percentile(values, p))
     stats["buckets"] = [
         {
@@ -385,16 +385,18 @@ def render_dataset(r):
                 "",
                 "**Duration distribution (seconds, measured from audio headers)**",
                 "",
-                "| n | min | p5 | p25 | median | p75 | p95 | max | mean | std |",
-                "|---|---|---|---|---|---|---|---|---|---|",
-                "| {} | {} | {} | {} | {} | {} | {} | {} | {} | {} |".format(
+                "| n | min | p5 | p25 | p50 | p75 | p90 | p95 | p99 | max | mean | std |",
+                "|---|---|---|---|---|---|---|---|---|---|---|---|",
+                "| {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} |".format(
                     fmt_num(dist["n"]),
                     fmt_num(dist["min"]),
-                    fmt_num(dist["p5"]),
-                    fmt_num(dist["p25"]),
-                    fmt_num(dist["median"]),
+                    fmt_num(dist.get("p5")),
+                    fmt_num(dist.get("p25")),
+                    fmt_num(dist.get("p50")),
                     fmt_num(dist["p75"]),
-                    fmt_num(dist["p95"]),
+                    fmt_num(dist.get("p90")),
+                    fmt_num(dist.get("p95")),
+                    fmt_num(dist.get("p99")),
                     fmt_num(dist["max"]),
                     fmt_num(dist["mean"]),
                     fmt_num(dist["std"]),
@@ -409,6 +411,27 @@ def render_dataset(r):
                 )
         else:
             lines += ["", "Duration distribution: **not measured**."]
+
+        for col in r["audio"]["columns"]:
+            rates = col.get("sampling_rates") or {}
+            if not rates:
+                continue
+            total = sum(rates.values())
+            lines += [
+                "",
+                "Sampling-rate histogram for audio column `{}`:".format(
+                    md_escape(col["name"])
+                ),
+                "",
+                "| Sampling rate (Hz) | Clips | Share |",
+                "|---|---|---|",
+            ]
+            for rate, count in sorted(rates.items(), key=lambda kv: int(kv[0])):
+                lines.append(
+                    "| {} | {} | {:.1f}% |".format(
+                        md_escape(rate), fmt_num(count), 100.0 * count / total
+                    )
+                )
 
         if r["audio"].get("metadata_duration_columns"):
             lines += ["", "Numeric columns whose name contains 'dur' (units not assumed):", ""]

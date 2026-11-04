@@ -5,7 +5,10 @@ Input CSV columns (extra columns are ignored):
     clip_id,speaker,duration,transcript
 * ``clip_id`` is the WAV basename (without ``.wav``).
 * ``duration`` is seconds of audio, measured before any trimming.
-* ``transcript`` is the raw sentence text.
+* ``transcript`` is the raw sentence text. When ``--normalise-english`` is
+  used, ``transcript_normalised`` holds the text the frontend will speak and
+  ``rules_fired`` lists the normalisation rules that changed it (semicolon
+  separated). Both columns are omitted when no row was normalised.
 
 The splitter:
 * groups clips that share a normalized transcript and never separates a group,
@@ -28,11 +31,13 @@ import csv
 import hashlib
 import math
 import os
+import sys
 import unicodedata
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 REQUIRED_COLUMNS = ("clip_id", "speaker", "duration", "transcript")
+OPTIONAL_COLUMNS = ("transcript_normalised", "rules_fired")
 
 
 class ManifestError(ValueError):
@@ -56,6 +61,8 @@ class ManifestRow:
     duration_text: str
     transcript: str
     line_number: int
+    transcript_normalised: str = ""
+    rules_fired: str = ""
 
     @property
     def hours(self):
@@ -71,6 +78,8 @@ class ManifestRow:
             "speaker": self.speaker,
             "duration": self.duration_text,
             "transcript": self.transcript,
+            "transcript_normalised": self.transcript_normalised,
+            "rules_fired": self.rules_fired,
         }
 
 
@@ -168,6 +177,8 @@ def load_manifest(path):
                     duration_text=values["duration"],
                     transcript=values["transcript"],
                     line_number=line_number,
+                    transcript_normalised=(raw.get("transcript_normalised") or "").strip(),
+                    rules_fired=(raw.get("rules_fired") or "").strip(),
                 )
             )
 
@@ -177,12 +188,23 @@ def load_manifest(path):
 
 
 def write_manifest(path, rows):
-    """Write a manifest in canonical column/row order."""
+    """Write a manifest in canonical column/row order.
+
+    The provenance columns are only written when at least one row carries
+    them, so un-normalised (for example Telugu) manifests keep four columns.
+    """
+    fieldnames = list(REQUIRED_COLUMNS)
+    if any(row.transcript_normalised or row.rules_fired for row in rows):
+        fieldnames.extend(OPTIONAL_COLUMNS)
+
     directory = os.path.dirname(os.path.abspath(path))
     os.makedirs(directory, exist_ok=True)
     with open(path, "w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(
-            handle, fieldnames=REQUIRED_COLUMNS, lineterminator="\n"
+            handle,
+            fieldnames=fieldnames,
+            lineterminator="\n",
+            extrasaction="ignore",
         )
         writer.writeheader()
         for row in sorted(rows, key=lambda item: (item.speaker.casefold(), item.clip_id)):
@@ -329,6 +351,37 @@ def _format_summary(summary):
     return "\n".join(line.format(**summary) for line in lines)
 
 
+def normalise_rows(rows, normaliser):
+    """Attach the normalised transcript and fired rules to each row."""
+    normalised_rows = []
+    for row in rows:
+        text, rules = normaliser(row.transcript)
+        if not normalize_transcript(text):
+            raise SplitError(
+                "clip {}/{}: transcript is empty after normalisation".format(
+                    row.speaker, row.clip_id
+                )
+            )
+        normalised_rows.append(
+            replace(
+                row,
+                transcript_normalised=text,
+                rules_fired=";".join(rules),
+            )
+        )
+    return normalised_rows
+
+
+def load_english_normaliser(english_root):
+    """Import the English normaliser without affecting Telugu runs."""
+    root = os.path.abspath(english_root)
+    if root not in sys.path:
+        sys.path.insert(0, root)
+    from text.normalise import normalise_english
+
+    return normalise_english
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(
         description="Deterministic, duration-aware train/validation split."
@@ -355,6 +408,16 @@ def main(argv=None):
         action="store_true",
         help="allow replacing existing output manifests",
     )
+    parser.add_argument(
+        "--normalise-english",
+        action="store_true",
+        help="add transcript_normalised and rules_fired using the English rules",
+    )
+    parser.add_argument(
+        "--english-root",
+        default="English",
+        help="language folder containing text/normalise.py (default: English)",
+    )
     args = parser.parse_args(argv)
 
     outputs = [args.train_out, args.val_out]
@@ -370,6 +433,14 @@ def main(argv=None):
 
     try:
         rows = load_manifest(args.manifest)
+        if args.normalise_english:
+            try:
+                normaliser = load_english_normaliser(args.english_root)
+                rows = normalise_rows(rows, normaliser)
+            except (ImportError, OSError, ValueError) as exc:
+                raise SystemExit(
+                    "error: English normalisation failed: {}".format(exc)
+                )
         train_rows, val_rows, unused_rows, summary = split_rows(
             rows,
             args.train_hours,

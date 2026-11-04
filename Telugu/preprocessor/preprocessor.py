@@ -23,9 +23,12 @@ from tqdm import tqdm
 import audio as Audio
 from preprocessor.manifest import load_manifests
 from preprocessor.report import (
+    DEFAULT_MAX_SEQ_LEN_MARGIN,
     LOG_COLUMNS,
     ClipSkipped,
+    check_mel_length,
     format_summary,
+    mel_frame_limit,
     summarize,
     write_summary,
 )
@@ -33,7 +36,7 @@ from text import text_to_sequence
 
 
 class Preprocessor:
-    def __init__(self, config, allow_dropped=False):
+    def __init__(self, config, allow_dropped=False, max_seq_len=None):
         self.config = config
         self.allow_dropped = allow_dropped
         self.in_dir = config["path"]["raw_path"]
@@ -45,6 +48,18 @@ class Preprocessor:
         self.cleaners = config["preprocessing"]["text"]["text_cleaners"]
         self.sampling_rate = config["preprocessing"]["audio"]["sampling_rate"]
         self.hop_length = config["preprocessing"]["stft"]["hop_length"]
+
+        if max_seq_len is None:
+            raise ValueError(
+                "max_seq_len is required so preprocessing can drop clips the "
+                "decoder would truncate at model.max_seq_len"
+            )
+        self.max_seq_len = max_seq_len
+        self.max_seq_len_margin = config["preprocessing"].get(
+            "max_seq_len_margin", DEFAULT_MAX_SEQ_LEN_MARGIN
+        )
+        # Fail before the first clip instead of on the first long one.
+        mel_frame_limit(max_seq_len, self.max_seq_len_margin)
 
         assert config["preprocessing"]["pitch"]["feature"] in [
             "phoneme_level",
@@ -454,6 +469,13 @@ class Preprocessor:
             )
         mel_spectrogram = mel_spectrogram[:, :n_alignment_frames]
         energy = energy[:n_alignment_frames]
+
+        # The saved mel length is what training reads. Count it from the real
+        # STFT output (frames = 1 + floor(samples / hop), the transform pads
+        # filter_length // 2 on both sides) instead of estimating from duration.
+        check_mel_length(
+            mel_spectrogram.shape[1], self.max_seq_len, self.max_seq_len_margin
+        )
 
         if self.pitch_phoneme_averaging:
             # perform linear interpolation

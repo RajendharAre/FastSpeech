@@ -16,6 +16,10 @@ preprocess:
     manifest_train: "manifests/train.csv"
     manifest_val: "manifests/val.csv"
   preprocessing:
+    # NEW(both): a clip whose saved mel exceeds model.max_seq_len minus this
+    # margin (1000 - 20 = 980 frames, about 11.4 s) is dropped as 'too_long'
+    # instead of being silently truncated during training.
+    max_seq_len_margin: 20
     text:
       # MODIFIED(Telugu): character-level Telugu frontend with NFC
       # normalization. Number-to-word expansion is not implemented yet.

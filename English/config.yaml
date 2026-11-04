@@ -7,6 +7,9 @@ preprocess:
   path:
     corpus_path: "data/raw"
     lexicon_path: "lexicon/librispeech-lexicon.txt"
+    # Optional G2P dictionary for names, built by scripts/build_g2p_names.py.
+    # Leave empty until the file exists.
+    supplementary_lexicon_path: ""
     raw_path: "data/raw"
     preprocessed_path: "data/preprocessed"
     # MODIFIED(both): the preprocessor consumes these manifests instead of
@@ -14,6 +17,10 @@ preprocess:
     manifest_train: "manifests/train.csv"
     manifest_val: "manifests/val.csv"
   preprocessing:
+    # NEW(both): a clip whose saved mel exceeds model.max_seq_len minus this
+    # margin (1000 - 20 = 980 frames, about 11.4 s) is dropped as 'too_long'
+    # instead of being silently truncated during training.
+    max_seq_len_margin: 20
     text:
       text_cleaners: ["english_cleaners"]
       language: "en"

@@ -64,6 +64,13 @@ class StatsTests(unittest.TestCase):
         self.assertEqual(counts["3-10 s"], 2)
         self.assertEqual(counts["< 1 s"], 0)
 
+    def test_duration_stats_p50_p90_p99(self):
+        stats = duration_stats([float(i) for i in range(1, 101)])
+        self.assertAlmostEqual(stats["p50"], 50.5)
+        self.assertAlmostEqual(stats["p90"], 90.1)
+        self.assertAlmostEqual(stats["p99"], 99.01)
+        self.assertAlmostEqual(stats["median"], stats["p50"])
+
     def test_text_stats_duplicates(self):
         stats = text_stats(["a", "a", "b"])
         self.assertEqual(stats["distinct_values"], 2)
@@ -174,6 +181,42 @@ class RenderTests(unittest.TestCase):
         report["groups"] = []
         text = render_markdown([report], "2026-11-02 10:00:00")
         self.assertIn("No `Audio` feature column was found", text)
+        self.assertIn("not measured", text)
+
+    def test_render_duration_percentiles_p50_p90_p99(self):
+        text = render_markdown([self.fixture()], "2026-11-02 10:00:00")
+        self.assertIn(
+            "| n | min | p5 | p25 | p50 | p75 | p90 | p95 | p99 | max | mean | std |",
+            text,
+        )
+        self.assertIn(
+            "| 3 | 600.000 | 600.000 | 600.000 | 600.000 | 600.000 | 600.000"
+            " | 600.000 | 600.000 | 600.000 | 600.000 | 0.000 |",
+            text,
+        )
+
+    def test_render_sampling_rate_histogram(self):
+        text = render_markdown([self.fixture()], "2026-11-02 10:00:00")
+        self.assertIn("| Sampling rate (Hz) | Clips | Share |", text)
+        self.assertIn("| 16000 | 3 | 100.0% |", text)
+
+        report = self.fixture()
+        report["audio"]["columns"][0]["sampling_rates"] = {"22050": 1, "16000": 2}
+        text = render_markdown([report], "2026-11-02 10:00:00")
+        self.assertIn("| 16000 | 2 | 66.7% |", text)
+        self.assertIn("| 22050 | 1 | 33.3% |", text)
+
+    def test_render_group_table_includes_hours(self):
+        text = render_markdown([self.fixture()], "2026-11-02 10:00:00")
+        self.assertIn("| Value | Clips | Hours |", text)
+        self.assertIn("| s1 | 2 | 0.3333 |", text)
+        self.assertIn("| s2 | 1 | 0.1667 |", text)
+
+    def test_render_old_report_without_new_percentiles(self):
+        report = self.fixture()
+        for key in ("p50", "p90", "p99"):
+            report["audio"]["duration_stats"].pop(key, None)
+        text = render_markdown([report], "2026-11-02 10:00:00")
         self.assertIn("not measured", text)
 
 

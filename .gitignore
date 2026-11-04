@@ -22,6 +22,7 @@ env/
 # --- Assignment documents (never redistributed) ---
 docs/*.pdf
 docs/source/
+docs/*.csv
 
 # --- Data (never commit datasets, raw audio or preprocessed features) ---
 data/
@@ -32,6 +33,9 @@ preprocessed_data/
 output/
 *.npy
 *.TextGrid
+
+# --- Run logs (Kaggle-side nohup redirects; the live copy stays on Kaggle) ---
+*.log
 
 # --- Training artefacts ---
 logs/

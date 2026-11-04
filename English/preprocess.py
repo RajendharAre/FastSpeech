@@ -26,6 +26,10 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    config = load_config(args.config)["preprocess"]
-    preprocessor = Preprocessor(config, allow_dropped=args.allow_dropped)
+    config = load_config(args.config)
+    preprocessor = Preprocessor(
+        config["preprocess"],
+        allow_dropped=args.allow_dropped,
+        max_seq_len=config["model"]["max_seq_len"],
+    )
     preprocessor.build_from_path()

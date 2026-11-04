@@ -127,12 +127,19 @@ Measured by the script:
 
 - every config, split and column with its declared feature type;
 - the audio column found by feature type, the sampling rate(s) and the total hours;
-- min / percentiles / max of clip duration, plus duration buckets;
+- min / percentiles / max of clip duration (p5, p25, p50, p75, p90, p95, p99),
+  plus duration buckets;
+- a per-column sampling-rate histogram (rate, clip count, share of clips);
 - clip count and hours for every low-cardinality column, so the speaker column can be
   chosen from evidence (Svarah has no speaker-name assumption in the script);
 - transcript character inventory, tag-like patterns, duplicate transcripts, and how
   many transcripts repeat across groups;
 - licence and `gated` fields, quoted from the Hugging Face API, with the revision sha.
+
+The committed `docs/dataset_report.md` was generated before p50/p90 and the
+histogram existed; rerun the inspection (or `--rebuild-only` against the JSON
+files) on Kaggle to add them. Rebuilding an older JSON fills the new cells with
+"not measured" instead of crashing.
 
 Not decided by the script (human decisions at GATE 1, see `docs/DATA_STRATEGY.md`):
 speaker strategy, subsampling, Telugu aligner, Telugu symbol set, vocoder use beyond

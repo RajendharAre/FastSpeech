@@ -36,7 +36,7 @@ All commands were run locally on Windows, CPU only. No checkpoint, dataset or au
 | `text_to_sequence("తాడుపై అతని పట్టుచాలా బలంగా ఉంది.", ["basic_cleaners"])` in `Telugu/` | `Telugu symbols kept: 5 [11, 11, 11, 11, 7]` for a full sentence |
 | `english_cleaners("The meeting will start at 10:45 AM on 12 November 2026, ...")` | `the meeting will start at ten:forty-five am on twelve november twenty twenty-six, ...` (colon retained) |
 | `from g2p_en import G2p` | `ModuleNotFoundError: No module named 'g2p_en'` locally; the English frontend could not be exercised |
-| `sha256sum docs/test_sentences.json` | `420187d15f4f9c4a61202ce8d6c3b45f72fbb4535c8f3be0689c01cf60847a6f` (unchanged) |
+| `sha256sum docs/test_sentences.json` | `420187d15f4f9c4a61202ce8d6c3b45f72fbb4535c8f3be0689c01cf60847a6f` (unchanged *at that time*; superseded — see section 14) |
 | `git rev-parse --is-inside-work-tree` | `fatal: not a git repository` |
 | Largest project file | `51,942,859` bytes (`hifigan/generator_universal.pth.tar.zip`), below the 100 MB rule |
 | `find Results -type f ! -name .gitkeep` | no output: zero audio files and zero plots |
@@ -65,13 +65,13 @@ Status legend:
 | A3 | Separate config file per language with `preprocess`, `model`, `train`, `inference` | RULES_FOR_AI §5 | Met | `English/config.yaml`, `Telugu/config.yaml`; `utils/config.py` enforces the four sections. Smoke tests load both. |
 | A4 | Two separate FastSpeech 2 models, trained from scratch, no pretrained acoustic weights | RULES_FOR_AI (not PDF; see §9.3 #3) | Partial | Separate folders, configs and model instances. No training yet. Code inspection found no acoustic checkpoint load except the project's own `checkpoints/<step>.pth.tar`; the only pretrained file is the HiFi-GAN vocoder. |
 | A5 | Public GitHub repository and assignment-form submission | DELIVERABLES_CHECKLIST / PROBLEM_STATEMENT (PDF does not name the form; §9.3 #4) | Missing | `git rev-parse` reports no repository; no remote, no form submission. |
-| A6 | `README.md` | DELIVERABLES_CHECKLIST | Partial | Exists and is honest about Phase 0/1 only (`README.md:11-13`). It does not yet contain data preparation, training results, checkpoint links or final commands. |
+| A6 | `README.md` | DELIVERABLES_CHECKLIST | Partial | The status paragraph (`README.md:11-27`) lists what is done and what is still unverified, including the measured Telugu split and the pending export. It still lacks the final data-preparation, training and inference commands with real arguments and the checkpoint links. |
 | A7 | `requirements.txt` | DELIVERABLES_CHECKLIST | Partial | Now pins a Kaggle 3.12 set including `datasets`, `huggingface_hub`, `nltk`, `pytest`, `tgt==1.5` (the old `1.4.4` had no wheel) and the audio stack. `torch` is deliberately left to Kaggle. The full set has not been installed on Kaggle; `pyworld==0.3.5` is source-only on Linux and needs the documented `--no-build-isolation` build. |
 | A8 | Trained checkpoints for both languages | DELIVERABLES_CHECKLIST | Missing | `checkpoints/` contains only `README.md`. No weights. |
 | A9 | `Report/Technical_Report.pdf` | DELIVERABLES_CHECKLIST | Missing | `Report/` is empty except `.gitkeep`; only an outline exists (`docs/REPORT_OUTLINE.md`). |
-| A10 | Training and validation loss plots for both models | DELIVERABLES_CHECKLIST | Missing | No PNGs. No CSV and no plotting script; only TensorBoard event logging in code (`English/train.py:100-112`), and TensorBoard logs are git-ignored. |
+| A10 | Training and validation loss plots for both models | DELIVERABLES_CHECKLIST | Partial (code only, no run) | `train.py` appends `logs/train/train_loss.csv` and `logs/val/val_loss.csv` (`utils/train_utils.LOSS_COLUMNS`); `scripts/plot_training_losses.py` turns those CSVs into `training_loss.png` and `validation_loss.png` and validates the header before plotting. No PNGs exist yet: there is no training run. Covered by 9 tests in `scripts/tests/test_plot_training_losses.py`. |
 | A11 | Five generated audio files per language, `<ID>.wav` | DELIVERABLES_CHECKLIST | Missing | `Results/*/test_generated_audios/` contains only `.gitkeep`. Inference is blocked (see F1/F2). |
-| A12 | Fifteen variance-adaptor plots per language (duration, pitch, energy for five IDs) | DELIVERABLES_CHECKLIST | Missing | `Results/*/variance_adaptor_plots/*` contains only `.gitkeep`; no plotting code exists. **0 of 30 plots can currently be produced.** |
+| A12 | Fifteen variance-adaptor plots per language (duration, pitch, energy for five IDs) | DELIVERABLES_CHECKLIST | Partial (code only, no run) | `inference.py:210` `export_variance_outputs` writes `{duration,pitch,energy}/<ID>.png` plus `variance_adaptor_plots/<ID>.json` with the predicted arrays for every test sentence, in both language folders. 0 of 30 plots exist so far — the exporter has never run against a checkpoint (F1/F2). Covered by 7 tests per language (`tests/test_variance_export.py`). |
 | A13 | Keep the reference MIT licence and credit it | RULES_FOR_AI §4 | Met | `English/LICENSE`, `Telugu/LICENSE`, `THIRD_PARTY_NOTICES.md`, `README.md` credits commit `d4e79eb...`. |
 | A14 | Respect dataset licences and cite both datasets | RULES_FOR_AI §6 | Unverified | Svarah's CC BY 4.0 is repeated from the card, not checked by a run; the IndicTTS-HF licence has not been read. `docs/dataset_report.md` is still a stub. |
 | A15 | Allowed extras only | DELIVERABLES_CHECKLIST / Gate 0 approval | Met | Gate 0 (2026-11-02) approved keeping `tests/`, `lexicon/`, `kaggle/` and both HiFi-GAN copies so each language folder stays self-contained. `docs/`, `CHANGES.md`, `THIRD_PARTY_NOTICES.md`, `.gitignore` and `manifests/` remain allowed. See §9.3 #10. |
@@ -123,7 +123,7 @@ Status legend:
 | D5 | Telugu G2P / lexicon / character-to-symbol mapping | DATA_STRATEGY gate | Missing | `lexicon_path` is empty (`Telugu/config.yaml:11`); no mapping, no alignment dictionary, no decision recorded. |
 | D6 | Telugu inference for T1-T4 | PDF proxy | Missing | `Telugu/inference.py:67-77` raises `NotImplementedError` for `language: te`, intentionally. |
 | D7 | Load test sentences only from `final`; refuse null | RULES_FOR_AI §8 | Met | `English/inference.py:80-94`; verified for both language sections (section 1). |
-| D8 | Never edit the test sentences | RULES_FOR_AI §8 | Met | SHA-256 still matches the Phase 0 baseline; no sentence text was changed. |
+| D8 | Never edit the test sentences | RULES_FOR_AI §8 | **Not met (human decision)** | The rule as written is breached: on 2026-11-04 the human corrected `raw_extracted` in `docs/test_sentences.json` (SHA-256 `420187d1…` → `944621434fc8…`). Verification in section 14 shows 9 of 10 edits restore the PDF's own text and 1 merges a space the PDF really prints. Every `final` is still `null`, so the loader still refuses to run. |
 | D9 | Report both original and normalised text per sentence | RULES_FOR_AI §8 / REPORT_OUTLINE | Missing | English prints raw text and phonemes but does not save the normalised form; Telugu produces none. No per-sentence record exists for the report table. |
 
 ### E. Training, validation, checkpointing and resuming
@@ -151,11 +151,11 @@ Status legend:
 | F1 | Generate all five English test sentences | PDF proxy | Blocked | Every `final` is null, the loader refuses, no step checkpoint exists, and `g2p_en` is absent locally. |
 | F2 | Generate all five Telugu test sentences | PDF proxy | Blocked | Null finals and no checkpoint, plus the missing Telugu frontend (D3-D6). |
 | F3 | Save audio as `<ID>.wav` | DELIVERABLES_CHECKLIST | Met (code only) | `inference.py:130-131`; no file exists. |
-| F4 | Save into `Results/<Language>/test_generated_audios/` | DELIVERABLES_CHECKLIST | Met (code only) | `config.yaml` inference `result_path`; `os.makedirs` at `inference.py:104`. |
+| F4 | Save into `Results/<Language>/test_generated_audios/` | DELIVERABLES_CHECKLIST | Met (code only) | Corrected 2026-11-04: this row previously claimed "Met" while the WAVs were written to the `Results/<Language>` root. `inference.py:32` defines `AUDIO_DIR_NAME = "test_generated_audios"`, `inference.py:278-279` creates it and `inference.py:306-307` writes `<ID>.wav` inside it. Still no file exists (F1/F2 block the run). |
 | F5 | Choose which speaker embedding to use | DATA_STRATEGY gate | Blocked | `speaker_id: 0` (`English/config.yaml:96`, `Telugu/config.yaml:98`) is labelled a placeholder; the speaker strategy is not decided. |
 | F6 | Pitch/energy/duration controls | FastSpeech 2 | Partial | Controls are passed through (`inference.py:118-124`), but at phoneme level the energy embedding uses `p_control` instead of `e_control` (`model/modules.py:124,146`). This is inherited from the reference at the same commit, confirmed from the upstream file; it means `energy_control` has no effect in the current configuration. |
 | F7 | Use the allowed pretrained HiFi-GAN vocoder | RULES_FOR_AI §7 | Met (code only) | `utils/model.py:42-71` loads `hifigan/generator_universal.pth.tar`; the zip must be extracted first, and the code is not exercised. |
-| F8 | Save predicted duration, pitch and energy arrays and normalised text | PLAN_PHASES Phase 6 / REPORT_OUTLINE | Missing | `inference.py:97-132` writes only the WAV; it does not retain any predictor outputs. |
+| F8 | Save predicted duration, pitch and energy arrays and normalised text | PLAN_PHASES Phase 6 / REPORT_OUTLINE | Partial (code only, no run) | Corrected 2026-11-04: `synthesize` now keeps the predictor outputs — `inference.py:316-326` extracts rounded durations, pitch and energy sliced to `src_len` (no padding) and `export_variance_outputs` (`inference.py:210`) writes `duration_frames`, `duration_seconds`, `pitch_hz`, `energy`, `pitch_normalized`, `energy_normalized`, the symbol sequence, the test sentence, the checkpoint step, speaker, controls and the `stats.json` blocks into `variance_adaptor_plots/<ID>.json`. Remaining gap: the English normalised string is printed but not stored in the JSON (only the post-normalisation symbol IDs are); no file exists yet because inference cannot run (F1/F2). |
 | F9 | Clear failure when prerequisites are missing | Robustness | Met | `inference.py:141-165` refuses null finals, a missing step, a missing checkpoint and a missing unzipped vocoder with specific messages. |
 | F10 | End-to-end inference verified | Deliverables | Missing | Never run; zero WAV files. |
 
@@ -465,10 +465,12 @@ audio.
   Telugu). No PDF page renderer (`pdftoppm` or Ghostscript) is installed on
   this machine, so the Telugu strings below are **text-layer evidence only**,
   not a visual confirmation.
-- The PDF was not modified. `docs/test_sentences.json` still has the same
-  SHA-256 as the Phase 0 baseline:
+- The PDF was not modified. `docs/test_sentences.json` still had the same
+  SHA-256 as the Phase 0 baseline at this audit (2026-11-02):
   `420187d15f4f9c4a61202ce8d6c3b45f72fbb4535c8f3be0689c01cf60847a6f`.
   Every `final` remains `null`.
+  (Superseded on 2026-11-04 by the human's `raw_extracted` corrections —
+  see section 14.)
 
 ### 9.2 Requirements confirmed by the PDF
 
@@ -551,3 +553,123 @@ Verification: English 56 tests and Telugu 78 tests pass in the pinned Python
 pass; `compileall` exits 0; both smoke tests pass (35,159,617 and 35,099,201
 parameters). Preprocessing, training and resume against real data remain
 unverified.
+
+## 11. Alignment QC, normalisation and G2P status update (2026-11-03)
+
+This section updates only the rows affected by the alignment-QC, English
+normalisation and G2P-dictionary work. No corpus, training run or checkpoint
+exists, and no stored assignment or test sentence was edited.
+
+| Row | Previous | Now | Evidence |
+|---|---|---|---|
+| D2 (English text normalisation) | Missing | **Met (code)** | `English/text/normalise.py` with ordered rules and per-rule provenance; `English/text/acronyms.csv`; `English/tests/test_normalise.py` (13 tests); inference prints raw, normalised and fired rules |
+| Manifest provenance | Missing | **Met (code)** | `--normalise-english` adds `transcript_normalised` and `rules_fired`; `transcript` stays raw; four-column manifests remain valid; 4 script tests |
+| Alignment QC (item 4 prerequisite) | Missing | **Met on synthetic data** | `scripts/validate_alignments.py` is read-only and writes `alignment_review.csv`; `tests/test_validate_alignments.py` (4 tests). Not yet run on a real MFA TextGrid |
+| Name pronunciations | Missing | **Partial** | `scripts/build_g2p_names.py` builds a `NAME<TAB>PHONES` supplement and `inference.py` merges it, with the main lexicon winning (3 tests). `g2p_en` is not installed locally, so no real dictionary was produced |
+
+Unknowns that must be resolved before preprocessing:
+
+1. **Tier names — resolved (2026-11-03).** The parser expects the standard
+   Praat long format with `IntervalTier` items named `words` and `phones`
+   (MFA defaults). The real Kaggle MFA output confirmed exactly these tier
+   names, so no parser change is needed.
+2. **Directory layout.** Clip IDs are matched by TextGrid file stem. The mapping
+   between manifest `clip_id` and the exported TextGrid names is unverified.
+3. **G2P output.** Capitalised-token detection is a heuristic; the first real
+   run must be reviewed name by name in `g2p_names_report.csv` before the
+   dictionary is enabled in `config.yaml`.
+
+Verification: targeted pytest 4 passed (1 warning); English 72 tests OK
+(1 skip); Telugu 78 OK (2 skips); 36 script tests OK; `compileall` exits 0; both
+smoke tests pass a forward pass in 0.095 s (English) and 0.093 s (Telugu). On
+scratch fixtures the alignment QC reported 2 clips, 2 TextGrids and 5 findings,
+and the splitter wrote six-column manifests; the G2P builder exited 1 because
+`g2p_en` is absent. Training, preprocessing, real alignment QC and real G2P
+generation remain unverified.
+
+## 12. max_seq_len audit (2026-11-03)
+
+Question: what happens when a mel sequence exceeds `model.max_seq_len`
+(1000 in both `English/config.yaml:67` and `Telugu/config.yaml:67`)? Both
+languages ship identical code, so the behaviour is identical. 1000 frames at
+22050 Hz / hop 256 (86.13 frames/s) is about 11.6 s of audio. No design was
+changed; the behaviour is pinned by `tests/test_max_seq_len.py` in each
+language folder.
+
+| Path | Behaviour | Location |
+|---|---|---|
+| Training (`model.train()`) | **Silent truncation, no error.** The decoder caps its sequence at `max_seq_len` frames; the returned mel mask is sliced to match; the loss slices the mel targets to the truncated mask. Frames beyond 1000 never contribute to the mel/postnet loss. Pitch, energy and duration losses are phoneme-level (`config.yaml`), so they are unaffected | `transformer/Models.py:154` (`max_len = min(max_len, self.max_seq_len)`), `:158-162` (slicing), `model/loss.py:43` (target slice) |
+| Validation and inference (`model.eval()`) | **No truncation, no error.** Encoder and decoder compute the full sinusoid table on the fly. Self-attention memory grows O(L²), so pathologically long sequences could exhaust memory, but nothing enforces or warns | `transformer/Models.py:82` and `:145` |
+| Encoder, training, >1001 phonemes | **RuntimeError** (broadcast mismatch against the fixed positional table). Practically unreachable for real clips; the mel path never hits it because the decoder caps first | `transformer/Models.py:89-91` |
+| Preprocessing | **Updated 2026-11-04:** a clip whose saved mel exceeds `model.max_seq_len - max_seq_len_margin` (1000 - 20 = 980 frames here) is now dropped with category `too_long`. The frame count is taken from the real STFT output (`audio/stft.py`), not estimated from duration. Below that limit nothing changes; selection logic is untouched | `preprocessor/preprocessor.py` (`check_mel_length` call after mel slicing), `preprocessor/report.py` |
+
+Consequence for the from-scratch training runs: clips longer than ~11.6 s are
+trained on their first ~11.6 s only, without any warning, unless they are
+removed earlier. The hard `too_long` drop at 980 frames (about 11.4 s) was
+added on request so preprocessing never hands the decoder a clip it would
+silently truncate; it applies to the saved (alignment-trimmed) mel, so it is
+stricter than the model's own cap. `tests/test_max_seq_len.py` (4 tests per
+language) still pins the model behaviour: end-to-end train forward + loss with
+a 1005-frame batch runs and returns 1000-frame outputs; decoder truncation in
+train mode; full length kept in eval mode; encoder RuntimeError beyond 1001
+phonemes. `tests/test_too_long.py` (7 tests per language) pins the guard and
+the STFT frame-count formula.
+
+## 13. Deliverable 4 and 6 plotting (2026-11-04) and one audit correction
+
+Two deliverables had no producing code at all. Both are now implemented locally; neither has produced a file yet, because inference and training still have no checkpoint and no preprocessed data. Statuses below are "code only" deliberately.
+
+| Deliverable | What now produces it | Verified by | Not yet verified |
+|---|---|---|---|
+| 4: `training_loss.png` + `validation_loss.png` per language | `train.py` appends `logs/train/train_loss.csv` and `logs/val/val_loss.csv`; the new `scripts/plot_training_losses.py` reads those CSVs (validating the header against `utils/train_utils.LOSS_COLUMNS`) and writes both PNGs into `--out-dir`, i.e. `Results/<Language>/` | 9 new tests in `scripts/tests/test_plot_training_losses.py` (round-trip, missing column, header-only, non-numeric, non-monotonic, empty, output files, two-panel layout) **plus the documented README command run against synthetic 20-step CSVs in a temp directory: exit 0, both PNGs written (113,362 and 110,369 bytes); a deliberately short-header CSV exited 1 listing the five missing columns** | A real CSV: no training run has happened, so the column ordering of production logs is inferred from `append_loss_csv`, not observed |
+| 6: 15 variance-adaptor plots per language | `inference.py` `export_variance_outputs` writes `Results/<Language>/variance_adaptor_plots/{duration,pitch,energy}/<ID>.png` plus `variance_adaptor_plots/<ID>.json` with the predicted arrays, symbols and run metadata for each test sentence; `check_phoneme_level` aborts if pitch/energy are not `phoneme_level`; predictions are sliced by `output[8]`/`output[9]` so padding never reaches a plot | 7 new tests per language (`Telugu/tests/test_variance_export.py`, `English/tests/test_variance_export.py`), including a real PNG+JSON export; the shared helper block is byte-identical in the two files (checked function by function) | A real synthesis: blocked on the checkpoint (A8) and the speaker decision (F5); the Telugu glyph fallback path is exercised only with ASCII labels locally |
+| 5: audio into `test_generated_audios/` | **Correction.** F4 was previously recorded as "Met"; it was not — the WAVs went to the `Results/<Language>` root. `AUDIO_DIR_NAME`/`audio_dir` now puts them in `test_generated_audios/<ID>.wav` | Path constants covered by the new tests; `grep` of the write site (`inference.py:306-307`) | No WAV exists yet (F1/F2) |
+
+Font handling note: the local machine's matplotlib default (DejaVu) has no Telugu glyphs, so `symbol_labels` probes installed fonts for the actual code points and, when none covers them, labels the x-axis with `U+XXXX` code points and prints a warning. A Telugu font must be installed on the Kaggle box for the submitted plots to show readable symbols — this is an environment step, not a code defect, and is UNVERIFIED until a real run.
+
+Suite state after these changes (system Python, CPU, no data): `scripts/tests` 45 passed; Telugu 94 passed / 2 skipped; English 90 passed / 1 skipped; `python -m compileall -q` exit 0. Nothing here ran preprocessing, training or inference.
+
+## 14. `docs/test_sentences.json` was edited by the human (2026-11-04)
+
+Rule §8 says the AI must never edit the test sentences, and the Phase 0 audit
+(D8) recorded the file as unmodified. That is no longer true, and the human made
+the change deliberately: the text layer of the assignment PDF splits Telugu
+grapheme clusters mid-word (`న్యూ రోఫార్మ కోలాజికల్`), so the recorded
+`raw_extracted` values were unusable.
+
+- Old SHA-256: `420187d15f4f9c4a61202ce8d6c3b45f72fbb4535c8f3be0689c01cf60847a6f`
+- New SHA-256: `944621434fc8d0cec6f8163354e1267bedba65c7be0138fb6e0a98460f2a012b`
+- Re-extraction command: `python -c "import pypdf; …"` with `pypdf 6.17.0` on
+  `docs/FastSpeech2_Assignment (1).pdf`. **No page renderer is installed on this
+  machine, so this is text-layer evidence only, not a visual confirmation of the
+  rendered PDF.**
+
+Per-sentence comparison of the new `raw_extracted` against the PDF text layer:
+
+| id | Verdict | PDF text layer | File now says |
+|---|---|---|---|
+| E1 | matches | as recorded | unchanged |
+| E2a | matches | as recorded | unchanged |
+| E2b | matches | as recorded | unchanged |
+| E3 | **corrected, matches PDF joined** | `The rhyth  m of the orchestra changed unexpectedly.` | `The rhythm of the orchestra changed unexpectedly.` |
+| E4 | matches | as recorded | unchanged |
+| T1 | **corrected, matches PDF joined** | `న్యూ రోఫార్మ కోలాజికల్  పరిశోధనలో నూతన ఔషధాల ప్రభావాన్ని  విశ్లేషించారు.` | `న్యూరోఫార్మకోలాజికల్ పరిశోధనలో నూతన ఔషధాల ప్రభావాన్ని విశ్లేషించారు.` |
+| T2a | matches | `తాడుపై అతని పట్టు చాలా బలంగా ఉంది.` | `తాడుపై అతని పట్టు చాలా బలంగా ఉంది.` (only the doubled space collapsed) |
+| T2b | **corrected — one merge is NOT in the PDF** | `ఆమె పట్టు చీరను ధరించి వేడుకకు వచ్చ ింది .` | `ఆమె పట్టుచీరను ధరించి వేడుకకు వచ్చింది.` — `వచ్చ ింది`→`వచ్చింది` is a join, but `పట్టు చీరను`→`పట్టుచీరను` removes a space the PDF actually prints |
+| T3 | **corrected, matches PDF joined** | `పులి అడ  విలో నిశ్శ బ్దంగా నడిచింది.` | `పులి అడవిలో నిశ్శబ్దంగా నడిచింది.` |
+| T4 | matches | newline inside the sentence removed | unchanged otherwise |
+
+Open questions this raises, for the human to settle before inference:
+
+1. **T2b is the one edit that is not pure artifact removal.** The pair T2a/T2b
+   exists to contrast `పట్టు` (grip) with `పట్టుచీర` (saree). Keeping the PDF's
+   space would leave T2b reading "she wore the saree" with `పట్టు` stranded; the
+   merge makes the contrast real. The choice is a data decision, not a code one,
+   and the submitted report should state which reading was used.
+2. **`final` is still `null` for all ten sentences.** `load_test_sentences`
+   refuses to run while any is null (`English/inference.py:80-94`, D7), so
+   nothing is unblocked yet. The edits were applied to `raw_extracted`, which is
+   the field meant to record what extraction produced; if the corrected text is
+   the sentence to speak, it belongs in `final` (and `raw_extracted` should keep
+   the broken original as provenance) — otherwise the file loses the record of
+   what the PDF extraction actually did.

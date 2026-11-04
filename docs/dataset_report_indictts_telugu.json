@@ -1,0 +1,340 @@
+{
+  "meta": {
+    "repo_id": "SPRINGLab/IndicTTS_Telugu",
+    "card_error": null,
+    "sha": "7ab3c18491bef3f5d4e820c2701b5f78f54031d6",
+    "gated": false,
+    "private": false,
+    "last_modified": "2025-01-27 21:07:32+00:00",
+    "license": null,
+    "tags": [
+      "task_categories:text-to-speech",
+      "language:te",
+      "size_categories:1K<n<10K"
+    ],
+    "python_version": "3.13.15",
+    "datasets_version": "4.8.5",
+    "hub_version": "1.29.0",
+    "soundfile_version": "0.14.0",
+    "language": "Telugu"
+  },
+  "generated_at": "2026-11-03 10:47:16",
+  "command": "kaggle/inspect_datasets.py --dataset indictts_telugu",
+  "splits": [
+    {
+      "config": "default",
+      "split": "train",
+      "num_rows": 8576,
+      "features": "{'audio': Audio(sampling_rate=None, decode=True, num_channels=None, stream_index=None), 'text': Value('string'), 'gender': ClassLabel(names=['female', 'male'])}"
+    }
+  ],
+  "audio": {
+    "columns": [
+      {
+        "name": "audio",
+        "measured": 8576,
+        "failed": 0,
+        "sampling_rates": {
+          "16000": 4043,
+          "48000": 4533
+        },
+        "total_hours": 36.712271359953704,
+        "failure_examples": []
+      }
+    ],
+    "duration_stats": {
+      "n": 8576,
+      "total_seconds": 132164.17689583334,
+      "total_hours": 36.712271359953704,
+      "min": 0.6591875,
+      "max": 151.628875,
+      "mean": 15.410934805950717,
+      "std": 12.439492042601133,
+      "median": 10.966583333333332,
+      "p1": 1.6744375,
+      "p5": 3.4606666666666666,
+      "p25": 7.026010416666667,
+      "p75": 20.553979166666668,
+      "p95": 39.9873125,
+      "p99": 60.39765625,
+      "buckets": [
+        {
+          "label": "< 1 s",
+          "count": 12
+        },
+        {
+          "label": "1-3 s",
+          "count": 258
+        },
+        {
+          "label": "3-10 s",
+          "count": 3592
+        },
+        {
+          "label": "10-30 s",
+          "count": 3702
+        },
+        {
+          "label": ">= 30 s",
+          "count": 1012
+        }
+      ]
+    },
+    "primary_column": "audio"
+  },
+  "groups": [
+    {
+      "column": "gender",
+      "distinct": 2,
+      "top": [
+        {
+          "value": "female",
+          "clips": 4043,
+          "seconds": 86115.47400000018,
+          "missing": 0,
+          "hours": 23.92096500000005
+        },
+        {
+          "value": "male",
+          "clips": 4533,
+          "seconds": 46048.702895833296,
+          "missing": 0,
+          "hours": 12.791306359953694
+        }
+      ],
+      "csv_path": null,
+      "clips_without_duration": 0
+    }
+  ],
+  "text": [
+    {
+      "column": "text",
+      "n": 8576,
+      "empty": 0,
+      "length_mean": 163.09433302238807,
+      "length_median": 126.0,
+      "length_max": 1473,
+      "distinct_chars": 74,
+      "non_ascii_share": 0.8626450188997331,
+      "top_chars": [
+        {
+          "char": " ",
+          "codepoint": "U+0020",
+          "name": "SPACE",
+          "count": 165242
+        },
+        {
+          "char": "ి",
+          "codepoint": "U+0C3F",
+          "name": "TELUGU VOWEL SIGN I",
+          "count": 99930
+        },
+        {
+          "char": "ు",
+          "codepoint": "U+0C41",
+          "name": "TELUGU VOWEL SIGN U",
+          "count": 96579
+        },
+        {
+          "char": "్",
+          "codepoint": "U+0C4D",
+          "name": "TELUGU SIGN VIRAMA",
+          "count": 86339
+        },
+        {
+          "char": "ా",
+          "codepoint": "U+0C3E",
+          "name": "TELUGU VOWEL SIGN AA",
+          "count": 82780
+        },
+        {
+          "char": "న",
+          "codepoint": "U+0C28",
+          "name": "TELUGU LETTER NA",
+          "count": 76239
+        },
+        {
+          "char": "ర",
+          "codepoint": "U+0C30",
+          "name": "TELUGU LETTER RA",
+          "count": 58787
+        },
+        {
+          "char": "క",
+          "codepoint": "U+0C15",
+          "name": "TELUGU LETTER KA",
+          "count": 56763
+        },
+        {
+          "char": "ం",
+          "codepoint": "U+0C02",
+          "name": "TELUGU SIGN ANUSVARA",
+          "count": 54702
+        },
+        {
+          "char": "ల",
+          "codepoint": "U+0C32",
+          "name": "TELUGU LETTER LA",
+          "count": 47012
+        },
+        {
+          "char": "త",
+          "codepoint": "U+0C24",
+          "name": "TELUGU LETTER TA",
+          "count": 41592
+        },
+        {
+          "char": "వ",
+          "codepoint": "U+0C35",
+          "name": "TELUGU LETTER VA",
+          "count": 38157
+        },
+        {
+          "char": "ప",
+          "codepoint": "U+0C2A",
+          "name": "TELUGU LETTER PA",
+          "count": 36173
+        },
+        {
+          "char": "ద",
+          "codepoint": "U+0C26",
+          "name": "TELUGU LETTER DA",
+          "count": 35637
+        },
+        {
+          "char": "డ",
+          "codepoint": "U+0C21",
+          "name": "TELUGU LETTER DDA",
+          "count": 33685
+        },
+        {
+          "char": "చ",
+          "codepoint": "U+0C1A",
+          "name": "TELUGU LETTER CA",
+          "count": 31491
+        },
+        {
+          "char": "మ",
+          "codepoint": "U+0C2E",
+          "name": "TELUGU LETTER MA",
+          "count": 31004
+        },
+        {
+          "char": "ే",
+          "codepoint": "U+0C47",
+          "name": "TELUGU VOWEL SIGN EE",
+          "count": 27777
+        },
+        {
+          "char": "స",
+          "codepoint": "U+0C38",
+          "name": "TELUGU LETTER SA",
+          "count": 24759
+        },
+        {
+          "char": "ట",
+          "codepoint": "U+0C1F",
+          "name": "TELUGU LETTER TTA",
+          "count": 24744
+        },
+        {
+          "char": "గ",
+          "codepoint": "U+0C17",
+          "name": "TELUGU LETTER GA",
+          "count": 23844
+        },
+        {
+          "char": "య",
+          "codepoint": "U+0C2F",
+          "name": "TELUGU LETTER YA",
+          "count": 23321
+        },
+        {
+          "char": "ో",
+          "codepoint": "U+0C4B",
+          "name": "TELUGU VOWEL SIGN OO",
+          "count": 21339
+        },
+        {
+          "char": ",",
+          "codepoint": "U+002C",
+          "name": "COMMA",
+          "count": 16525
+        },
+        {
+          "char": "అ",
+          "codepoint": "U+0C05",
+          "name": "TELUGU LETTER A",
+          "count": 15563
+        },
+        {
+          "char": "ె",
+          "codepoint": "U+0C46",
+          "name": "TELUGU VOWEL SIGN E",
+          "count": 14845
+        },
+        {
+          "char": "ీ",
+          "codepoint": "U+0C40",
+          "name": "TELUGU VOWEL SIGN II",
+          "count": 12643
+        },
+        {
+          "char": "ూ",
+          "codepoint": "U+0C42",
+          "name": "TELUGU VOWEL SIGN UU",
+          "count": 12116
+        },
+        {
+          "char": ".",
+          "codepoint": "U+002E",
+          "name": "FULL STOP",
+          "count": 9902
+        },
+        {
+          "char": "జ",
+          "codepoint": "U+0C1C",
+          "name": "TELUGU LETTER JA",
+          "count": 9119
+        }
+      ],
+      "tag_counts": {
+        "angle_brackets": 0,
+        "square_brackets": 0,
+        "curly_braces": 0,
+        "parens": 0,
+        "percent": 0,
+        "ellipsis": 0
+      },
+      "distinct_values": 8463,
+      "duplicate_values": 93,
+      "duplicate_rows": 206,
+      "samples": [
+        "స్కాలర్ షిప్పులు వెంటనే విడుదల చెయ్యాలని, పంతోమ్మిది తేదీన, ఒక రోజు నిరాహార దీక్షలు చేయనున్నట్లు తెలిపారు.",
+        "ప్రత్యేక వంటకాల ఘుమఘుమలు, కర్నూలు జులై న్యూస్ టుడే, ప్రత్యేక వంటకాలతో, ఆ ప్రాంతమంతా ఘుమఘుమలాడింది.",
+        "చిట్టపూరుకు అతడు వెళ్లి వస్తుండగా, మామిడిపల్లి వద్ద, ఆదివారం రాత్రి జరిగిన రోడ్డు ప్రమాదంలో, దుర్మరణం పాలయ్యాడు."
+      ],
+      "group_column": "gender",
+      "duplicates_across_groups": 90
+    }
+  ],
+  "summary": {
+    "rows": 8576,
+    "splits_loaded": 1,
+    "clips_measured": 8576,
+    "total_hours": 36.712271359953704,
+    "audio_failures": 0,
+    "configs": [
+      "default"
+    ],
+    "group_column": "gender"
+  },
+  "label_columns": {
+    "gender": [
+      "female",
+      "male"
+    ]
+  },
+  "warnings": [],
+  "json_path": "docs/dataset_report_indictts_telugu.json"
+}

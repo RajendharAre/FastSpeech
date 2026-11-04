@@ -2,6 +2,10 @@
 
 Kept free of librosa/pyworld imports so it can be unit-tested without the
 audio stack. Manifests are produced by ``scripts/split_dataset.py``.
+
+Manifests built with ``--normalise-english`` also carry
+``transcript_normalised`` and ``rules_fired``; those provenance columns are
+not needed by preprocessing and are ignored here.
 """
 import csv
 import math

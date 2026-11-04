@@ -143,9 +143,10 @@ def main():
                     "exported wav has %d samples, over the %d-sample budget"
                     % (high.shape[0], MAX_SAMPLES)
                 )
-            sf.write(os.path.join(RAW, clip_id + ".wav"), high, TARGET_SR,
-                     subtype="PCM_16")
-            with open(os.path.join(RAW, clip_id + ".lab"), "w", encoding="utf-8") as f:
+            sf.write(os.path.join(RAW, speaker, clip_id + ".wav"), high,
+                     TARGET_SR, subtype="PCM_16")
+            with open(os.path.join(RAW, speaker, clip_id + ".lab"), "w",
+                      encoding="utf-8") as f:
                 f.write(text + "\n")
 
             low = resample(audio, sr, MFA_SR)

@@ -126,7 +126,9 @@ def main():
             if audio.ndim > 1:
                 audio = audio.mean(axis=1)
             seconds = len(audio) / float(sr)
-            if audio.shape[0] > MAX_SAMPLES:
+            # The budget is 22,050 Hz mel frames, so the source-rate sample
+            # count must never be compared against MAX_SAMPLES directly.
+            if seconds > MAX_SEC:
                 too_long += 1
                 skipped.append((clip_id, round(seconds, 3)))
                 report.append((clip_id, "too_long", "%.3f s" % seconds))
@@ -136,6 +138,11 @@ def main():
             os.makedirs(os.path.join(MFA, speaker), exist_ok=True)
 
             high = resample(audio, sr, TARGET_SR)
+            if high.shape[0] > MAX_SAMPLES:
+                raise AssertionError(
+                    "exported wav has %d samples, over the %d-sample budget"
+                    % (high.shape[0], MAX_SAMPLES)
+                )
             sf.write(os.path.join(RAW, clip_id + ".wav"), high, TARGET_SR,
                      subtype="PCM_16")
             with open(os.path.join(RAW, clip_id + ".lab"), "w", encoding="utf-8") as f:

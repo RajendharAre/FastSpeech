@@ -171,7 +171,7 @@ training. Manifests are committed under `English/manifests/` and `Telugu/manifes
 | Gradient clipping | 1.0 | 1.0 |
 | Validation / synthesis | every 1,000 steps | every 1,000 steps |
 | Checkpoints | every 5,000 steps | every 5,000 steps |
-| Hardware | Kaggle Tesla T4 (15,360 MiB), 2.11.0+cu130 | same when available |
+| Hardware | Kaggle GPU T4 x2, PyTorch 2.11.0+cu130, `nn.DataParallel` (batch 16 = 8+8) | same once the GPU slot frees |
 | Measured step time | 0.304 s/step (300-step calibration) | **PENDING** |
 | Wall clock | ≈ 5.3 h for 60,000 steps | **PENDING** |
 | Budget rationale | 60,000 steps ≈ 213 epochs; the reference 900,000 steps is unattainable and would leave the learning rate flat, so the anneal points were scaled to keep the reference fractions (33/43/55 %) | same logic once the step time is measured |
@@ -297,7 +297,11 @@ and which failures are attributable to data, to the frontend, or to the training
 
 ## 11. Reproducibility
 
-Dependencies are pinned in `requirements.txt`. Each language folder has one `config.yaml`; every path inside it is
+Dependencies are listed in `requirements.txt`, which is a **proposed pin set, not a record of the environment that
+ran**: the file was never installed as a whole on Kaggle. The sessions that produced these results used the Kaggle
+image's own scientific stack on Python 3.13 with PyTorch 2.11.0+cu130, plus targeted installs of `pyworld`, `tgt`,
+`unidecode` and `inflect`; `g2p_en` was never installed, so the supplementary name dictionary was not used. Each
+language folder has one `config.yaml`; every path inside it is
 relative to that folder, so all commands are run from inside `English/` or `Telugu/`.
 
 ```bash
@@ -322,8 +326,11 @@ python scripts/plot_variance.py --config config.yaml --restore_step <STEP>
 python inference.py --config config.yaml --restore_step <STEP>
 ```
 
-Environment used for training: Kaggle notebook, Python 3.13, PyTorch 2.11.0+cu130, CUDA on a Tesla T4; forced
-alignment in a separate MFA 3.4.3 environment installed from conda-forge.
+Environment used for training: Kaggle notebook on **GPU T4 x2**, Python 3.13, PyTorch 2.11.0+cu130. `train.py`
+wraps the model in `nn.DataParallel` unconditionally, so the batch of 16 is split 8/8 across both cards; both
+GPUs report 100 % utilisation for a single training process. Forced alignment ran in a separate MFA 3.4.3
+environment installed from conda-forge, invoked as `PATH=<env>/bin:$PATH <env>/bin/mfa ...` because a session
+restore had stripped the environment's exec bits and shared-library symlinks.
 
 ## Appendix A — measured figures used above
 

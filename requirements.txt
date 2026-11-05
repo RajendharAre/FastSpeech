@@ -1,13 +1,21 @@
 # Python dependencies for both language models.
 #
-# Target environment: Kaggle Linux, Python 3.12 (v173 image, 2026-10-30).
-# The same pins also have wheels for Python 3.10 and 3.11.
+# PROPOSED pin set, not a record of what actually ran. This file has never been
+# installed as a whole on Kaggle. The preprocessing and training sessions used
+# the Kaggle image's own scientific stack on Python 3.13 with PyTorch
+# 2.11.0+cu130, plus targeted installs of pyworld, tgt, unidecode and inflect.
+# See the "Setup" section of README.md for the measured environment.
+#
+# The header below is the original target, kept for a fresh image:
+#   Kaggle Linux, Python 3.12 (v173 image, 2026-10-30); the same pins also have
+#   wheels for Python 3.10 and 3.11.
 #
 # The project code also runs on the author's Windows CPU machine for smoke
 # tests, but this file is not installable there on Python 3.14 (the pinned
-# NumPy has no cp314 wheel). The local audio tests and both smoke tests were
-# run in an isolated Python 3.11 environment with NumPy 2.0.2, SciPy 1.13.1,
-# librosa 0.10.2.post1, numba 0.60.0, pyworld 0.3.5 and torch 2.15.0+cpu.
+# NumPy has no cp314 wheel). The local tests were run against the local
+# environment; the audio tests were run in an isolated Python 3.11
+# environment with NumPy 2.0.2, SciPy 1.13.1, librosa 0.10.2.post1, numba
+# 0.60.0, pyworld 0.3.5 and torch 2.15.0+cpu.
 #
 # torch is supplied by Kaggle. Do not replace it with a CPU wheel on Kaggle;
 # record the exact Kaggle torch version in the technical report.
@@ -18,9 +26,8 @@
 #   python -m pip install numpy==2.0.2 Cython==3.0.10 setuptools==69.5.1 wheel==0.43.0
 #   python -m pip install -r requirements.txt --no-build-isolation
 #
-# The first command installs the build tools; the second compiles pyworld
-# against NumPy 2.0.2. The first Kaggle run must confirm this and record the
-# result in CHANGES.md. It has NOT been run on Linux yet.
+# This build recipe has still not been exercised: on the real sessions pyworld
+# was installed with plain pip against the image's NumPy and imported fine.
 
 # --- Core ---
 numpy==2.0.2

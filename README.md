@@ -8,24 +8,39 @@ Two **separate** FastSpeech 2 models trained **from scratch** on two datasets:
 | English | Svarah | https://huggingface.co/datasets/ai4bharat/Svarah |
 | Telugu | IndicTTS Telugu | https://huggingface.co/datasets/SPRINGLab/IndicTTS_Telugu |
 
-Status: **Phase 0 (skeleton), Phase 1 (dataset inspection), the pre-training
-infrastructure fixes (environment, training control, preprocessing drop
-accounting), alignment QC, English rule-based normalisation with rule provenance
-in the manifests, a G2P supplementary-dictionary builder, the variance-adaptor
-plot/array export in `inference.py` and the loss-CSV plotting script.**
-Telugu data selection is measured and split on Kaggle (male-only, capped at 980
-mel frames: train 2,835 clips / 5.486 h, val 528 clips / 1.002 h, 0 clip and 0
-transcript overlap, `--seed 1234`); the audio export to `Telugu/data/raw` and the
-16 kHz MFA corpus were still running at the time of writing, and no alignment,
-preprocessing or training run has completed for either language. No model has
-been trained, no audio has been generated and no result is reported. The
-alignment parser's expected tier names (`words`, `phones`) are confirmed by the
-real Kaggle MFA output; the QC script itself has still only been exercised on
-synthetic fixtures, and `g2p_en` is not installed locally, so real G2P generation
-is unverified. The English (Svarah) side has had no data work at all.
-The assignment PDF is now at `docs/FastSpeech2_Assignment (1).pdf`; its
-comparison with the audit is in `docs/REQUIREMENTS_AUDIT.md` sections 9 and 13.
-See `docs/PLAN_PHASES.md` for the plan and `CHANGES.md` for every change.
+## Status (2026-11-05)
+
+Both languages are aligned and preprocessed on Kaggle. English training is in
+progress as of this writing; nothing below is a generated-speech result.
+
+| | English (Svarah) | Telugu (IndicTTS) |
+|---|---|---|
+| Manifest clips | 5,582 | 3,363 |
+| Usable after alignment + features | 5,322 (4,500 train / 822 val) | 3,269 (2,751 train / 518 val) |
+| Usable audio | 4.842 h | 4.700 h |
+| Speakers | 2 (one female, one male) | 1 (male) |
+| Dropped, by category | 260 (alignment 164, missing TextGrid 71, pitch 20, feature stats 4, transcript 1) | 94 (alignment 83, missing TextGrid 3, missing audio 8) |
+| Aligner | MFA `english_us_arpa` + G2P for 4.47 % OOV | MFA grapheme dictionary trained on the corpus |
+| Training | 60,000 steps at a measured 0.304 s/step on Kaggle T4x2, running | not started (single Kaggle GPU slot) |
+| Audio provenance | exported at 22.05 kHz | **16 kHz source upsampled to 22.05 kHz** |
+
+Still to do before submission: Telugu calibration and training, checkpoint
+selection, inference on the ten test sentences, the loss and variance-adaptor
+PNGs, the final report, and re-running `scripts/check_no_overlap.py` against the
+final Kaggle manifests (disjointness was reported by the splitter when the
+manifests were built, but the check script has not been run on those files).
+
+Completed work: Phase 0 (skeleton), Phase 1 (dataset inspection), the
+pre-training infrastructure fixes (environment, training control, preprocessing
+drop accounting), alignment QC, English rule-based normalisation with rule
+provenance in the manifests, the G2P supplementary-dictionary builder, the
+variance-adaptor plot/array export in `inference.py` and the loss-CSV plotting
+script. The interim English loss analysis, including the finding that validation
+loss has risen since step 7,000 while training loss keeps falling, is in
+`Report/Technical_Report.md` section 7. The assignment PDF is at
+`docs/FastSpeech2_Assignment (1).pdf`; the requirement-by-requirement audit is
+`docs/REQUIREMENTS_AUDIT.md`. See `docs/PLAN_PHASES.md` for the plan and
+`CHANGES.md` for every change.
 
 ## Repository layout
 
@@ -56,24 +71,33 @@ kaggle/                  dataset inspection scripts, Kaggle run guide and bootst
 
 ## Setup
 
-`requirements.txt` targets **Kaggle Linux, Python 3.12** (the current Kaggle
-image). It is not installable on the author's Windows Python 3.14 because the
-pinned NumPy has no cp314 wheel; the local smoke tests use the existing local
-environment, and the audio tests were run in an isolated Python 3.11
-environment.
+`requirements.txt` is a **proposed** pin set, not a record of the environment
+that actually ran. It targets Kaggle Linux, and it has never been installed as a
+set on Kaggle. What the two training/preprocessing sessions really used:
 
-On Kaggle, install the build tools first so that `pyworld` compiles against the
-same NumPy it will run with:
+| | Measured on the Kaggle sessions |
+|---|---|
+| Python | 3.13 (`/usr/local/lib/python3.13/dist-packages`) |
+| PyTorch | 2.11.0+cu130, supplied by the image, `torch.cuda.is_available()` True |
+| Accelerator | Tesla T4 x2 (`nn.DataParallel` splits the batch of 16 across both) |
+| Installed on top of the image | `pyworld`, `tgt`, `unidecode`, `inflect` |
+| Not installed | `g2p_en` (see "G2P dictionary for names") |
+
+The pins are also not installable on the author's Windows machine under Python
+3.14 (the pinned NumPy has no cp314 wheel); the local tests and smoke tests run
+against the local environment instead. Treat `requirements.txt` as a starting
+point to reproduce on a fresh image, and the table above as what is known to
+work.
+
+To build `pyworld` against a matching NumPy on a fresh Linux image:
 
 ```bash
 python -m pip install numpy==2.0.2 Cython==3.0.10 setuptools==69.5.1 wheel==0.43.0
 python -m pip install -r requirements.txt --no-build-isolation
 ```
 
-`pyworld==0.3.5` is source-only on Linux. The first Kaggle run must confirm the
-build and record the result. PyTorch is supplied by Kaggle; do not replace it
-with a CPU wheel. The reference repo ships the pretrained HiFi-GAN generator
-zipped:
+`pyworld==0.3.5` is source-only on Linux. Do not replace Kaggle's PyTorch with a
+CPU wheel. The reference repo ships the pretrained HiFi-GAN generator zipped:
 
 ```bash
 cd English && unzip hifigan/generator_universal.pth.tar.zip -d hifigan && cd ..
@@ -86,8 +110,12 @@ installs the pip pins confirmed by the first real Kaggle run (NumPy 2.1.3,
 SciPy 1.16.3, librosa 0.10.2.post1, and pyworld built with
 `--no-build-isolation`), unzips the HiFi-GAN generators and downloads the MFA
 `english_us_arpa` acoustic model and dictionary. Every step is idempotent and
-prints what it skips. The script has not been run yet; the first real Kaggle
-run must record its output in `CHANGES.md`.
+prints what it skips. **The script itself has never been executed end to end**:
+the two Kaggle sessions built their MFA 3.4.3 environment by hand (`micromamba`
+plus conda-forge, because `kalpy` is only on conda-forge), and after a session
+restore needed repair work (`chmod +x` on the environment's `bin`, and recreating
+`lib*.so.N` soname symlinks that the restore had flattened). Treat the script as
+unverified and the manual sequence recorded in `CHANGES.md` as the working one.
 
 ## CPU smoke test (no training)
 
@@ -135,9 +163,16 @@ python scripts/check_no_overlap.py \
 
 Repeat with the `Telugu/...` output paths. The splitter is deterministic for a
 given `--seed` (default 1234), groups identical normalized transcripts, and
-keeps at least one training clip for every validation speaker. Dataset export
-(WAV, `.lab`, TextGrid) is still not implemented; preprocessing needs those
-inputs.
+keeps at least one training clip for every validation speaker.
+
+Dataset export is done by `docs/export_svarah.py` (English) and
+`docs/export_male.py` (Telugu), both run on Kaggle: they write `<clip>.wav` at
+22,050 Hz plus the `<clip>.lab` transcript, and a separate 16 kHz corpus for the
+aligner, with a per-clip status CSV (`preprocessing_log.csv` style) so a rerun
+can be reconciled clip by clip. The Telugu `.lab` must contain the **alignment**
+text, not the raw dataset transcript, because
+`Telugu/preprocessor/preprocessor.py:352` requires
+`len(text_to_sequence(text)) == len(duration)`.
 
 ### English normalisation and provenance
 
@@ -186,9 +221,11 @@ Flags are `short_word_interval`, `long_phone_interval`,
 `textgrid_clip_id_not_in_manifest` and `manifest_clip_missing_textgrid`, each
 with the clip, interval and timings. The thresholds are CLI options. The parser
 expects the standard Praat long format with `IntervalTier` items named `words`
-and `phones`; both tier names are confirmed by the real Kaggle MFA output. The
-mapping from manifest `clip_id` to the exported TextGrid file names is still
-unverified.
+and `phones`; both tier names are confirmed by the real Kaggle MFA output, and the
+`<clip_id>` to TextGrid file-name mapping is now exercised end to end by the
+English preprocessing run (5,322 clips consumed). The QC script itself has still
+only been executed against synthetic fixtures, so its flags have never been read
+on real alignments.
 
 ### G2P dictionary for names
 
@@ -207,9 +244,14 @@ python scripts/build_g2p_names.py \
 
 Set `preprocess.path.supplementary_lexicon_path` in `English/config.yaml` to
 the generated file; `inference.py` loads it after the main lexicon, and the main
-lexicon wins on conflicts. This step needs `g2p_en`, which is pinned in
-`requirements.txt` but is not installed in the local Windows environment, so no
-real pronunciations have been generated yet.
+lexicon wins on conflicts. **This step was not used for the submitted run.**
+`g2p_en` is pinned in `requirements.txt` but was never installed on either Kaggle
+session, so `English/lexicon/g2p_names.txt` does not exist and
+`supplementary_lexicon_path` is left empty. Out-of-vocabulary names were handled
+one level earlier instead: MFA's own G2P model (`--g2p_model_path`) resolved the
+4.47 % of English tokens that are not in `english_us_arpa`, so those words still
+got phone alignments and durations. At inference, any word missing from the
+LibriSpeech lexicon falls back to `g2p_en` at runtime.
 
 ```bash
 # from English/ (same for Telugu/)
@@ -276,6 +318,25 @@ python -m unittest discover -s scripts/tests -v
 python -m pytest tests/test_validate_alignments.py -q
 python -m pytest kaggle/tests -q
 ```
+
+Run the suites **one folder at a time**. A single root-level `pytest English/tests Telugu/tests`
+cannot work: each language folder is self-contained by requirement, so both ship
+modules with identical names (`text`, `utils`, `model`, `preprocessor`), and only one
+of them can be importable at a time. With `--import-mode=importlib` the collision
+surfaces as `cannot import name 'telugu' from 'text' (English/text/__init__.py)`.
+
+Latest local run (2026-11-05, Windows, Python 3.14):
+
+| Invocation | Result |
+|---|---|
+| `pytest English/tests` | 90 passed, 1 skipped |
+| `pytest Telugu/tests tests` | 98 passed, 2 skipped |
+| `pytest kaggle/tests scripts/tests` | 60 passed |
+
+The skips are `test_preprocessing_drops.py:47` in both languages (the preprocessing
+stack — `pyworld`, `tgt` — is not installed in the local Windows environment, so that
+path is only exercised on Kaggle) and `Telugu/tests/test_config_validation.py:205`
+(an English-only rule).
 
 `tests/conftest.py` puts the repository root on `sys.path`, so the root pytest
 tests import `scripts.*` whether pytest is run as a module or as a console

@@ -64,7 +64,7 @@ scripts/                 split_dataset.py, check_no_overlap.py,
                          validate_alignments.py, build_g2p_names.py,
                          plot_training_losses.py
 Results/English|Telugu/  loss plots, generated audio, variance-adaptor plots (Phase 5-6)
-Report/                  Technical_Report.pdf (Phase 7)
+Report/                  Technical_Report.md and the built Technical_Report.pdf
 docs/                    assignment notes and dataset report
 kaggle/                  dataset inspection scripts, Kaggle run guide and bootstrap.sh
 ```
@@ -305,8 +305,31 @@ can quote numbers without re-running synthesis. Pitch and energy are denormalise
 with `data/preprocessed/stats.json`; the run aborts if the config does not use
 `phoneme_level` features, because the export indexes predictions per symbol. If
 no installed font covers the Telugu code points the x labels fall back to
-`U+XXXX` and a warning is printed — install a Telugu font (e.g. Noto Sans Telugu)
-before generating the submitted figures.
+`U+XXXX` and a warning is printed. The author's Windows machine does have a
+Telugu font (`C:\Windows\Fonts\Nirmala.ttc`), so the figures render there; the
+Kaggle image has none, so matplotlib figures with Telugu labels must be made
+locally or with a font installed first.
+
+## Report PDF
+
+`Report/Technical_Report.pdf` is built from the Markdown by
+`scripts/render_report_pdf.py`, which needs a Chromium-family browser and no
+other tool (the author's machine has no pandoc):
+
+```bash
+python scripts/render_report_pdf.py --check
+```
+
+It converts with `markdown-it-py`, styles the page for A4 and prints through
+headless Chrome or Edge (`REPORT_BROWSER=<path>` overrides the search). `--check`
+re-reads the PDF and fails if an English sentence is absent or if fewer than 90 %
+of the Telugu code points in the Markdown reached the page, which is how a missing
+Telugu font is caught. Telugu is **not** matched as a whole string: a PDF content
+stream stores glyph runs in visual order, so extraction reorders the vowel signs
+and can repeat an anusvara even when the page renders perfectly. The last build
+measured 220 of 220 Telugu code points present, 0 replacement characters and 11
+pages. `--telugu-font <ttf>` embeds a font as a data URI for machines that have
+no Indic font installed.
 
 ## Unit tests
 
@@ -331,7 +354,7 @@ Latest local run (2026-11-05, Windows, Python 3.14):
 |---|---|
 | `pytest English/tests` | 90 passed, 1 skipped |
 | `pytest Telugu/tests tests` | 98 passed, 2 skipped |
-| `pytest kaggle/tests scripts/tests` | 60 passed |
+| `pytest kaggle/tests scripts/tests` | 67 passed |
 
 The skips are `test_preprocessing_drops.py:47` in both languages (the preprocessing
 stack — `pyworld`, `tgt` — is not installed in the local Windows environment, so that
@@ -364,6 +387,9 @@ and a mel one frame over `max_seq_len - margin` is dropped as `too_long`.
 both PNG outputs, and `tests/test_variance_export.py` (each language) performs a
 real variance export into a temp directory and asserts the three plots, the JSON
 arrays, the `phoneme_level` abort and the missing-`stats.json` abort.
+`scripts/tests/test_render_report_pdf.py` covers the Telugu code-point counter,
+the Markdown-to-HTML table and `@font-face` embedding, and skips the HTML tests
+when `markdown-it-py` is absent.
 
 ## Checkpoints
 

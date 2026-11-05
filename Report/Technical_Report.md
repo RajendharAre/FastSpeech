@@ -1,20 +1,21 @@
 # Technical Report — FastSpeech 2 (English and Telugu)
 
-**Status: draft.** Sections 1–5 and the reproducibility section are written from measured values that are recorded in
-`CHANGES.md`. Sections 6–9 need artefacts that do not exist yet (loss CSVs, generated audio, variance plots) and are
-marked **PENDING**; no number or observation has been invented for them.
+**Status: draft.** Sections 1–6 and section 11 are written from measured values that are recorded in `CHANGES.md`.
+Section 7 holds an interim reading of the English run and its final version, and sections 8 (listening), 9 and 10,
+need artefacts that do not exist yet — finished training, generated audio and variance plots. They are marked
+**PENDING**; no number or observation has been invented for them.
 
 Section map against the seven items the assignment PDF asks the report to cover:
 
 | PDF item | Section here |
 |---|---|
 | Implementation approach, architecture components, modifications per language | 1, 2, 3 |
-| Dataset selection, subsampling, preprocessing, split, training configuration | 4, 5 |
-| Loss-curve analysis: convergence, instability, overfitting | 6 (**PENDING**) |
-| Generated-speech observations per test sentence (pronunciation, quality) | 7 (**PENDING**) |
-| Variance-adaptor analysis (duration, F0, energy) per test sentence | 8 (**PENDING**) |
-| English vs Telugu comparison, limitations, failures, improvements | 9 (**PENDING**) |
-| Reproducibility: dependencies, configs, commands | 10 |
+| Dataset selection, subsampling, preprocessing, split, training configuration | 4, 5, 6 |
+| Loss-curve analysis: convergence, instability, overfitting | 7 (interim; final **PENDING**) |
+| Generated-speech observations per test sentence (pronunciation, quality) | 8 (text side measured; listening **PENDING**) |
+| Variance-adaptor analysis (duration, F0, energy) per test sentence | 9 (**PENDING**) |
+| English vs Telugu comparison, limitations, failures, improvements | 10 (**PENDING**) |
+| Reproducibility: dependencies, configs, commands | 11 |
 
 ---
 
@@ -238,6 +239,30 @@ of reading the file while training wrote to it. Training itself is continuous, s
 The sentences come from `docs/test_sentences.json`, field `final`, unmodified. Five per language: E1, E2a, E2b, E3, E4
 and T1, T2a, T2b, T3, T4. The listening-based part of this section (pronunciation, overall quality) is pending; the
 text-processing part is measured and reproduced below.
+
+### 8.0 The ten strings the models receive
+
+Stored in `docs/test_sentences.json` under `final` and used unchanged by `inference.py`. Each line below was written by a script that read the JSON, not re-typed from the PDF, so the Telugu column is byte-identical to the text the model receives.
+
+| ID | Sentence |
+|---|---|
+| E1 | The antidisestablishmentarianism movement gained considerable momentum during the parliamentary proceedings. |
+| E2a | The orchestra's conduct during the ceremony was praised by the audience. |
+| E2b | The researchers will conduct an experiment to evaluate the proposed method. |
+| E3 | The rhythm of the orchestra changed unexpectedly. |
+| E4 | The meeting will start at 10:45 AM on 12 November 2026, so andaroo should arrive on time. |
+| T1 | న్యూరోఫార్మకోలాజికల్ పరిశోధనలో నూతన ఔషధాల ప్రభావాన్ని విశ్లేషించారు. |
+| T2a | తాడుపై అతని పట్టు చాలా బలంగా ఉంది. |
+| T2b | ఆమె పట్టు చీరను ధరించి వేడుకకు వచ్చింది. |
+| T3 | పులి అడవిలో నిశ్శబ్దంగా నడిచింది. |
+| T4 | ఈ సమావేశం 2026 నవంబర్ 12వ తేదీ ఉదయం 10:45 గంటలకు ప్రారంభమవుతుంది, సమయానికి సిద్ధంగా ఉంచండి. |
+
+> **Font requirement (measured).** The Telugu rows need a Telugu-capable font. This PDF was built on the
+> author's Windows machine, where `Nirmala.ttc` supplies the glyphs: the rendered page shows all five Telugu
+> sentences correctly and the check in `scripts/render_report_pdf.py` counted 223 of the 220 Telugu codepoints
+> in the Markdown inside the PDF, with no replacement characters. The same build on a Linux box with no Indic
+> font — including the Kaggle image — renders those rows as blanks, so either build the report locally or pass
+> `--telugu-font <path>` to embed one.
 
 ### 8.1 What the frontends actually produce (measured)
 

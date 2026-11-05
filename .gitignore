@@ -36,6 +36,8 @@ output/
 
 # --- Run logs (Kaggle-side nohup redirects; the live copy stays on Kaggle) ---
 *.log
+# Session log dumps pasted into docs/ for analysis; not part of the deliverable
+docs/log*.txt
 
 # --- Training artefacts ---
 logs/

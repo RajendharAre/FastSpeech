@@ -176,14 +176,62 @@ training. Manifests are committed under `English/manifests/` and `Telugu/manifes
 | Wall clock | ≈ 5.3 h for 60,000 steps | **PENDING** |
 | Budget rationale | 60,000 steps ≈ 213 epochs; the reference 900,000 steps is unattainable and would leave the learning rate flat, so the anneal points were scaled to keep the reference fractions (33/43/55 %) | same logic once the step time is measured |
 
-## 7. Loss analysis — **PENDING**
+## 7. Loss analysis — interim reading (steps 100–25,000); final version **PENDING**
 
-Inputs that must exist before this section is written: `Results/English/training_loss.png`,
-`Results/English/validation_loss.png` (and the Telugu equivalents), derived from `logs/train/train_loss.csv` and
-`logs/val/val_loss.csv`. The section will report total loss and its five components (mel, mel post-net, pitch, energy,
-duration), where each component plateaus, any spike or divergence and the step at which it occurred, and whether
-validation loss turns upward while training loss keeps falling (overfitting). No claim will be made before the curve is
-inspected.
+Source: `logs/train/log.txt` and `logs/val/log.txt` copied out of the running Kaggle session when training had reached
+step 25,000 of 60,000. The final version of this section will use the complete logs and the two PNG plots.
+
+### 7.1 Training curve
+
+Total loss falls from 10.0987 at step 100 to 1.1886 at step 25,000. The last twenty logged points average 1.3096 with a
+standard deviation of 0.0810, so the curve is smooth. The only large jump is 2.21 between steps 200 and 300, at the end
+of warm-up; there is no divergence and no loss explosion anywhere in the range.
+
+| Step | Total | Mel | Post-net | Pitch | Energy | Duration |
+|---|---|---|---|---|---|---|
+| 2,000 | 3.4646 | 1.0418 | 1.0928 | 0.5762 | 0.5365 | 0.2174 |
+| 6,000 | 2.3361 | 0.7680 | 0.7685 | 0.3319 | 0.2925 | 0.1752 |
+| 10,000 | 2.5023 | 0.8076 | 0.8076 | 0.3041 | 0.3903 | 0.1927 |
+| 14,000 | 1.6698 | 0.6822 | 0.6819 | 0.1023 | 0.1050 | 0.0984 |
+| 18,000 | 1.5338 | 0.5451 | 0.5450 | 0.1586 | 0.1272 | 0.1578 |
+| 22,000 | 1.3200 | 0.5782 | 0.5778 | 0.0750 | 0.0464 | 0.0426 |
+| 25,000 | 1.1886 | 0.4841 | 0.4838 | 0.0626 | 0.0475 | 0.1105 |
+
+### 7.2 Validation curve
+
+Validation loss reaches its minimum early and then rises:
+
+| Step | Total | Mel | Pitch | Energy | Duration |
+|---|---|---|---|---|---|
+| 1,000 | 3.8787 | 1.0210 | 0.6174 | 0.9921 | 0.2248 |
+| 5,000 | 3.8918 | 0.9946 | 0.6335 | 1.0459 | 0.2262 |
+| **7,000** | **3.8246** | 0.9835 | 0.6343 | 0.9999 | 0.2235 |
+| 15,000 | 4.0304 | 1.0044 | 0.6939 | 1.0697 | 0.2583 |
+| 20,000 | 4.0585 | 1.0127 | 0.6882 | 1.0846 | 0.2604 |
+| 25,000 | 4.0588 | 1.0142 | 0.6811 | 1.0780 | 0.2715 |
+
+### 7.3 Convergence, instability, overfitting (interim)
+
+- **Convergence.** Training converged normally; by step 25,000 the total loss is 8.5× lower than at step 100 and the
+  post-net loss has almost caught up with the mel loss, which is the expected behaviour once the post-net stops adding
+  correction on top of a well-predicted mel.
+- **Instability.** None after warm-up. The pitch loss oscillates between about 0.05 and 0.24 across neighbouring
+  thousand-step blocks (e.g. 0.0497 at 24,000 and 0.0626 at 25,000, against 0.2376 at 24,900), which is ordinary
+  mini-batch variance, not divergence.
+- **Overfitting.** Validation loss is now 6.1 % above its best value and has risen monotonically since step 7,000,
+  while training loss fell from 3.44 to 1.19 over the same span. By step 25,000 the training set has been traversed
+  about 89 times (281 steps/epoch, 4,500 training clips). The rise is concentrated in the variance predictors —
+  duration +21 %, energy +9 %, pitch +10 % from step 1,000 to 25,000 — while the mel losses stay flat near 1.01. In
+  other words the acoustic model stops generalising after roughly 25 epochs and the predictors begin to memorise this
+  speaker pair's timing and dynamics.
+- **Consequence for checkpoint selection.** Validation-loss minimum is step 7,000, but checkpoints are written every
+  5,000 steps, so the best available candidates are 5,000, 10,000 and the final one. The final choice will be made by
+  comparing those three on the test sentences, not by validation loss alone; the reason will be stated in the final
+  version of this section.
+
+Log quality note: eight training log lines (steps 12,100–12,800) are absent from the copied file — a buffering artefact
+of reading the file while training wrote to it. Training itself is continuous, since the validation entries for steps
+12,000 and 13,000 are present.
 
 ## 8. Test-sentence observations — text side measured, listening side **PENDING**
 

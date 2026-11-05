@@ -79,6 +79,10 @@ def log(
 
     if fig is not None:
         logger.add_figure(tag, fig)
+        # MODIFIED(both): close the figure explicitly. It is created per synth and
+        # per validation step and nothing else releases it, which is how the English
+        # run grew past 30 GiB of RAM and was OOM-killed at step 32,000.
+        plt.close(fig)
 
     if audio is not None:
         logger.add_audio(

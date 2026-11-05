@@ -171,11 +171,21 @@ training. Manifests are committed under `English/manifests/` and `Telugu/manifes
 | Warm-up | 4,000 steps | 4,000 steps |
 | Gradient clipping | 1.0 | 1.0 |
 | Validation / synthesis | every 1,000 steps | every 1,000 steps |
-| Checkpoints | every 5,000 steps | every 5,000 steps |
+| Checkpoints | every 2,500 steps (5,000 for the first 30,000 steps) | every 5,000 steps |
 | Hardware | Kaggle GPU T4 x2, PyTorch 2.11.0+cu130, `nn.DataParallel` (batch 16 = 8+8) | same once the GPU slot frees |
-| Measured step time | 0.304 s/step (300-step calibration) | **PENDING** |
-| Wall clock | ≈ 5.3 h for 60,000 steps | **PENDING** |
+| Measured step time | **0.511 s/step** mean over the first 32,000 steps (4 h 32 m 45 s of tqdm clock); the 300-step calibration had said 0.304 s/step | **PENDING** |
+| Wall clock | ≈ 8.5 h for 60,000 steps at the measured mean, not the 5.3 h the calibration implied | **PENDING** |
 | Budget rationale | 60,000 steps ≈ 213 epochs; the reference 900,000 steps is unattainable and would leave the learning rate flat, so the anneal points were scaled to keep the reference fractions (33/43/55 %) | same logic once the step time is measured |
+
+**Run interruption at step 32,000.** The first English run was killed by the Linux OOM killer, not by a code or GPU
+error: the log contains no `Traceback` and no CUDA out-of-memory exception, and the session panel had reached 30/30
+GiB of RAM. The step rate also degraded as it went — the last 2,000 steps ran at ~0.65 s/step against ~0.30 s/step at
+the start — which is the same memory growth showing up as time. Checkpoints up to `30000.pth.tar` were on disk and
+survived, so the run resumes from 30,000 rather than restarting. Two changes were made before resuming, neither of
+them to the model, the data or the schedule: `train.step.save_step` was cut to 2,500 so a future kill costs ~21
+minutes instead of ~45, and `utils/tools.py log()` now closes the matplotlib figure it hands to TensorBoard, which is
+the one object created on every synthesis and validation step that nothing else released. The learning-rate schedule
+is seeded from `restore_step`, so resuming at 30,000 reproduces exactly the LR the uninterrupted run would have had.
 
 ## 7. Loss analysis — interim reading (steps 100–25,000); final version **PENDING**
 

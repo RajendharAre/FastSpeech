@@ -185,11 +185,40 @@ duration), where each component plateaus, any spike or divergence and the step a
 validation loss turns upward while training loss keeps falling (overfitting). No claim will be made before the curve is
 inspected.
 
-## 8. Test-sentence observations — **PENDING**
+## 8. Test-sentence observations — text side measured, listening side **PENDING**
 
 The sentences come from `docs/test_sentences.json`, field `final`, unmodified. Five per language: E1, E2a, E2b, E3, E4
-and T1, T2a, T2b, T3, T4. Per sentence the report will give the text as given, the normalised form the model actually
-received, the symbol sequence, and a listening-based note on pronunciation and overall quality.
+and T1, T2a, T2b, T3, T4. The listening-based part of this section (pronunciation, overall quality) is pending; the
+text-processing part is measured and reproduced below.
+
+### 8.1 What the frontends actually produce (measured)
+
+| ID | Symbols | Text the model receives after normalisation |
+|---|---|---|
+| E1 | 108 | `the antidisestablishmentarianism movement gained considerable momentum during the parliamentary proceedings.` |
+| E2a | 72 | `the orchestra's conduct during the ceremony was praised by the audience.` |
+| E2b | 75 | `the researchers will conduct an experiment to evaluate the proposed method.` |
+| E3 | 49 | `the rhythm of the orchestra changed unexpectedly.` |
+| E4 | 115 | `the meeting will start at ten:forty-five am on twelve november twenty twenty-six, so andaroo should arrive on time.` |
+| T1 | 68 | unchanged Telugu characters (character-level frontend, no lexicon) |
+| T2a | 34 | unchanged |
+| T2b | 40 | unchanged |
+| T3 | 33 | unchanged |
+| T4 | 91 | **unchanged, including the digits**: `… 2026 … 12వ … 10:45 …` |
+
+All ten encode without an unknown-character error, which is the precondition for inference.
+
+Two consequences worth stating before listening:
+
+- **E4 is normalised correctly.** `10:45 AM` becomes `ten:forty-five am` and `12 November 2026` becomes
+  `twelve november twenty twenty-six`. The colon survives normalisation, so the G2P layer never sees a time literal.
+  `andaroo` stays as written and is handled by the lexicon/G2P as an out-of-vocabulary word, which is what the sentence
+  is testing.
+- **T4 is not normalised.** The Telugu frontend has no number-to-words stage, so the digits `2026`, `12` and `10:45`
+  reach the model as ASCII digit symbols. Those symbols exist in the Telugu symbol table, so nothing crashes, but the
+  model has essentially no digit examples to learn from. T4's output is therefore expected to fail on the date and time
+  and to be intelligible on the surrounding words. This is a frontend gap, not a training failure, and it is reported
+  as such rather than hidden.
 
 Why each sentence is interesting:
 

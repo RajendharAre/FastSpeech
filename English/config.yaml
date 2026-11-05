@@ -92,16 +92,18 @@ train:
     grad_clip_thresh: 1.0
     grad_acc_step: 1
     warm_up_step: 4000
-    anneal_steps: [300000, 400000, 500000]
+    # MODIFIED(English): reference [300000, 400000, 500000] scaled by 60000/900000
+    # so the anneal points stay at the same fractions of the run.
+    anneal_steps: [20000, 26000, 33000]
     anneal_rate: 0.3
   step:
-    # Reference defaults; the real step cap is set at GATE 4 from measured
-    # seconds per step (docs/PLAN_PHASES.md).
-    total_step: 900000
+    # MODIFIED(English): measured 0.304 s/step on a Kaggle T4 with the 300-step
+    # calibration run (2026-11-05); 60000 steps is a ~5.3 h budget.
+    total_step: 60000
     log_step: 100
     synth_step: 1000
     val_step: 1000
-    save_step: 10000  # MODIFIED(both): reference used 100000, too sparse for a 4-day run
+    save_step: 5000  # MODIFIED(both): reference used 100000, too sparse for a 4-day run
 
 inference:
   restore_step: null  # set to the trained checkpoint step before inference

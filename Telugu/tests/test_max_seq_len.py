@@ -1,6 +1,6 @@
 """Pins the observed behaviour when a sequence exceeds model.max_seq_len.
 
-Audit result (design unchanged; see docs/REQUIREMENTS_AUDIT.md section 12):
+Audit result (design unchanged):
 
 - Training: the decoder silently truncates its input to ``max_seq_len``
   frames (``transformer/Models.py``, Decoder branch

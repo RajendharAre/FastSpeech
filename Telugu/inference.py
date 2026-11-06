@@ -1,7 +1,7 @@
 # NEW(both): inference entry point required by the assignment folder structure.
 # Adapted from the reference synthesize.py (single-sentence mode only).
-# Reads only the "final" field of docs/test_sentences.json and refuses to run
-# while any final sentence is null (docs/RULES_FOR_AI.md, section 8).
+# Reads only the "final" field of docs/test_sentences.json and stops with an
+# error while any final sentence is still null.
 import argparse
 import json
 import os

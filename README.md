@@ -40,10 +40,7 @@ script. The resumed English training and validation loss plots are in
 `Results/English/`; English inference at checkpoint step 35,000 generated five
 WAVs plus duration, pitch, and energy plots/JSONs in the Kaggle working copy.
 Section 7 of `Report/Technical_Report.md` discusses the plots' scope and the
-earlier overlapping-run log limitation. The assignment PDF is at
-`docs/FastSpeech2_Assignment (1).pdf`; the requirement-by-requirement audit is
-`docs/REQUIREMENTS_AUDIT.md`. See `docs/PLAN_PHASES.md` for the plan and
-`CHANGES.md` for every change.
+earlier overlapping-run log limitation. `CHANGES.md` records every change.
 
 ## Repository layout
 
@@ -68,7 +65,7 @@ scripts/                 split_dataset.py, check_no_overlap.py,
                          plot_training_losses.py
 Results/English|Telugu/  loss plots, generated audio, variance-adaptor plots (Phase 5-6)
 Report/                  Technical_Report.md and the built Technical_Report.pdf
-docs/                    assignment notes, dataset report, agent handoff
+docs/                    assignment notes, dataset report, test sentences
 kaggle/                  dataset inspection scripts, Kaggle run guide and bootstrap.sh
 ```
 

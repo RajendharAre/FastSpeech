@@ -1,7 +1,7 @@
 # NEW(both): inference entry point required by the assignment folder structure.
 # Adapted from the reference synthesize.py (single-sentence mode only).
-# Reads only the "final" field of docs/test_sentences.json and refuses to run
-# while any final sentence is null (docs/RULES_FOR_AI.md, section 8).
+# Reads only the "final" field of docs/test_sentences.json and stops with an
+# error while any final sentence is still null.
 import argparse
 import json
 import os
@@ -102,12 +102,12 @@ def preprocess_text(text, preprocess_config):
     language = preprocess_config["preprocessing"]["text"]["language"]
     if language == "en":
         return preprocess_english(text, preprocess_config)
-    # MODIFIED(Telugu): the Telugu frontend (symbol set + number-to-words) is a
-    # GATE 1 decision and is built in Phase 3. Failing loudly is intentional.
+    # MODIFIED(Telugu): this file only synthesises English. The Telugu frontend
+    # lives in Telugu/inference.py, so anything else fails here instead of
+    # silently using the wrong symbol table.
     raise NotImplementedError(
-        "No frontend for language '{}' yet. See docs/PLAN_PHASES.md Phase 3.".format(
-            language
-        )
+        "English/inference.py handles English only; use Telugu/inference.py "
+        "for '{}'.".format(language)
     )
 
 

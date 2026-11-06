@@ -15,7 +15,7 @@ Writes four things:
 The manifest keeps the raw dataset text, so `scripts/split_dataset.py
 --normalise-english` remains the only place normalisation is recorded. Svarah
 ships no train/val split and no speaker labels, so the speaker directory name
-comes from its `gender` column (see docs/REQUIREMENTS_AUDIT.md).
+comes from its `gender` column, which is the only usable label in the release.
 """
 import csv
 import io

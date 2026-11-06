@@ -108,6 +108,30 @@ row, trust `CHANGES.md` and re-derive the state from `git log` + the files.
 - Root cause: 60,000 steps × batch 16 over 4,500 clips = **213 epochs** of 4.84 h of
   audio with 35,159,617 parameters. The model memorised and did not generalise;
   validation loss bottomed near step 7,000 and rose after that.
+- **The pipeline is now proven correct, so stop looking for a bug.** Three CPU
+  measurements on 2026-11-06 (scratch scripts, not committed):
+  - *Vocoder is faithful and in-domain.* Decoding the saved predicted mel through
+    the shipping HiFi-GAN and re-analysing the audio gives **L1 0.24–0.28 nat**
+    against the mel it was handed. Dividing the mel by ln(10) before decoding — the
+    log-base hypothesis — degrades that to **L1 2.9–3.2** and raises spectral
+    flatness from ~0.01 to ~0.13, so the current scaling is the right one.
+  - *Griffin-Lim reproduces the same mel* at **L1 0.70–0.74**, i.e. less exactly,
+    as expected (60 iterations). It is not a rescue path, but it confirms the mel is
+    renderable and that both decoders agree on what they were given.
+  - *Text conditioning works.* Shuffling E1's symbols moves the predicted mel by
+    **L1 1.098**; swapping in E3's symbols moves it by **1.167**; two genuinely
+    different sentences (E2a vs E2b) differ by **1.058**. The decoder reacts to the
+    phones at full strength.
+  - Predicted mel marginals are also normal: median ≈ −5.5, p99 ≈ −0.5, max ≈ 0.7.
+    Durations are correct. Nothing is degenerate; the acoustic *detail* is wrong,
+    which is what a val mel L1 of 1.05 nat buys you.
+- Consequence: there is no CPU fix. The only lever with a real chance is an
+  **earlier checkpoint** (validation minimum near 7,000): grab `5000.pth.tar` and
+  `10000.pth.tar` from the English Kaggle working directory if that session still
+  exists, then decode locally on CPU. Weights post-processing (mel sharpening,
+  speaker swap, slower duration) was tried as variants on 2026-11-06 and none is
+  expected to change intelligibility, because the error is in the acoustic detail
+  rather than in the rendering.
 
 ## 5. Next actions, in priority order
 

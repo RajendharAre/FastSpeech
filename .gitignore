@@ -61,3 +61,8 @@ HF_TOKEN
 
 # --- Keep the required empty result folders ---
 !**/.gitkeep
+
+# --- Session scratch, never part of the deliverable ---
+Qoder_FastSpeech2_History.md
+docs/training_loss.png
+docs/validation_loss.png

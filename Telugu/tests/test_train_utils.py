@@ -17,6 +17,7 @@ sys.path.insert(0, LANG_DIR)
 
 from utils.train_utils import (  # noqa: E402
     LOSS_COLUMNS,
+    _cpu_state,
     append_loss_csv,
     capture_rng_state,
     checkpoint_path,
@@ -103,6 +104,24 @@ class RngTests(unittest.TestCase):
 
     def test_empty_state_is_ignored(self):
         restore_rng_state(None)
+
+    def test_rng_tensors_are_coerced_to_cpu(self):
+        # torch.set_rng_state only accepts a CPU ByteTensor, but a checkpoint
+        # loaded with map_location="cuda" hands back CUDA tensors. _cpu_state is
+        # the guard that made the English resume possible. CUDA cannot be
+        # exercised on this box, so the contract is pinned directly.
+        moved = _cpu_state(torch.get_rng_state())
+        self.assertEqual(moved.device.type, "cpu")
+        self.assertEqual(moved.dtype, torch.uint8)
+        self.assertEqual(_cpu_state(7), 7)
+
+    def test_restore_accepts_a_rebuilt_tensor(self):
+        set_seed(1234)
+        state = capture_rng_state()
+        expected = torch.rand(1).item()
+        state["torch"] = state["torch"].clone()
+        restore_rng_state(state)
+        self.assertEqual(torch.rand(1).item(), expected)
 
 
 if __name__ == "__main__":

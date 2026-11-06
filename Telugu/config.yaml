@@ -106,7 +106,11 @@ train:
     log_step: 100
     synth_step: 1000
     val_step: 1000
-    save_step: 2500  # MODIFIED(both): reference used 100000, too sparse for a 4-day run; 2500 caps an OOM restart at ~21 min
+    # MODIFIED(Telugu): 5000 instead of 2500. The Kaggle working volume has
+    # about 8 GiB free and a checkpoint is 418 MB, so 24 saves at 2500 steps
+    # would need 10 GB and repeat the English disk exhaustion. 5000 leaves
+    # twelve saves (~5 GB) and still caps a crash at roughly 42 minutes.
+    save_step: 5000
 
 inference:
   restore_step: null  # set to the trained checkpoint step before inference

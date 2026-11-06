@@ -8,10 +8,11 @@ Two **separate** FastSpeech 2 models trained **from scratch** on two datasets:
 | English | Svarah | https://huggingface.co/datasets/ai4bharat/Svarah |
 | Telugu | IndicTTS Telugu | https://huggingface.co/datasets/SPRINGLab/IndicTTS_Telugu |
 
-## Status (2026-11-05)
+## Status (2026-11-06)
 
-Both languages are aligned and preprocessed on Kaggle. English training is in
-progress as of this writing; nothing below is a generated-speech result.
+Both languages are aligned and preprocessed. English training finished at
+60,000 steps and its five test sentences have been synthesised. Telugu
+training started on 2026-11-06 and is still running.
 
 | | English (Svarah) | Telugu (IndicTTS) |
 |---|---|---|
@@ -21,15 +22,21 @@ progress as of this writing; nothing below is a generated-speech result.
 | Speakers | 2 (one female, one male) | 1 (male) |
 | Dropped, by category | 260 (alignment 164, missing TextGrid 71, pitch 20, feature stats 4, transcript 1) | 94 (alignment 83, missing TextGrid 3, missing audio 8) |
 | Aligner | MFA `english_us_arpa` + G2P for 4.47 % OOV | MFA grapheme dictionary trained on the corpus |
-| Training | Reached 60,000 steps; step 35,000 had the lowest validation loss among the clean resumed-run candidates, and five inference WAVs were generated; backups and listening review remain | not started (single Kaggle GPU slot) |
+| Training | 60,000 steps; checkpoint 60,000 is the one shipped, picked by listening rather than by loss (7/10 against 5/10 for step 5,000); five test WAVs generated | 60,000 steps configured, running as of 2026-11-06 |
 | Audio provenance | exported at 22.05 kHz | **16 kHz source upsampled to 22.05 kHz** |
 
-Still to do before submission: back up the selected English checkpoint and
-inference outputs, complete the English listening/quality diagnosis, Telugu calibration
-and training, Telugu variance-adaptor PNGs, the final report, and re-running
-`scripts/check_no_overlap.py` against the final Kaggle manifests (disjointness
-was reported by the splitter when the manifests were built, but the check
-script has not been run on those files).
+**English output quality.** All five English test sentences come out
+unintelligible. The pipeline is not the cause: the vocoder reproduces the mel it
+is handed, text conditioning and durations both check out, and the same
+speech-recognition stack scores 0.000 WER on real LibriSpeech through the same
+decode path. The cause is that 4.84 h of audio was memorised over 213 epochs
+instead of generalised, and the variance adaptor collapses towards the mean.
+Report sections 7 and 8 give the measurements.
+
+Still to do before submission: Telugu inference and its variance-adaptor plots,
+report sections 9 and 10, and re-running `scripts/check_no_overlap.py` against
+the final Kaggle manifests (disjointness was reported by the splitter when the
+manifests were built, but the check script has not been run on those files).
 
 Completed work: Phase 0 (skeleton), Phase 1 (dataset inspection), the
 pre-training infrastructure fixes (environment, training control, preprocessing

@@ -1,9 +1,9 @@
 # Technical Report — FastSpeech 2 (English and Telugu)
 
-**Status: draft.** Sections 1–6 and section 11 are written from measured values that are recorded in `CHANGES.md`.
-Section 7 includes the resumed English-run plots, but a full checkpoint comparison remains pending. English inference
-audio and variance plots now exist; section 8 records preliminary listener feedback, while detailed listening review,
-section 9 analysis and the Telugu-dependent comparison in section 10 remain pending.
+**Status: draft.** Sections 1–8 and section 11 are written from measured values that are recorded in `CHANGES.md`.
+Section 7 now compares all four retained English checkpoints on both validation loss and speech recognition, and
+section 8 records what a controlled set of tests established about the English failure. Section 9 and the
+Telugu-dependent comparison in section 10 remain pending until the Telugu run finishes and its audio is reviewed.
 
 Section map against the seven items the assignment PDF asks the report to cover:
 
@@ -11,8 +11,8 @@ Section map against the seven items the assignment PDF asks the report to cover:
 |---|---|
 | Implementation approach, architecture components, modifications per language | 1, 2, 3 |
 | Dataset selection, subsampling, preprocessing, split, training configuration | 4, 5, 6 |
-| Loss-curve analysis: convergence, instability, overfitting | 7 (resumed-run plots reviewed; full checkpoint comparison **PENDING**) |
-| Generated-speech observations per test sentence (pronunciation, quality) | 8 (text side measured; initial listener feedback recorded; detailed review **PENDING**) |
+| Loss-curve analysis: convergence, instability, overfitting | 7 (resumed-run plots and four-checkpoint comparison) |
+| Generated-speech observations per test sentence (pronunciation, quality) | 8 (frontend, listener scores, ASR and controls measured; Telugu listening **PENDING**) |
 | Variance-adaptor analysis (duration, F0, energy) per test sentence | 9 (**PENDING**) |
 | English vs Telugu comparison, limitations, failures, improvements | 10 (**PENDING**) |
 | Reproducibility: dependencies, configs, commands | 11 |
@@ -163,19 +163,19 @@ training. Manifests are committed under `English/manifests/` and `Telugu/manifes
 
 | Setting | English | Telugu |
 |---|---|---|
-| Steps | 60,000 | **PENDING** (measured on the Telugu calibration run) |
+| Steps | 60,000 | 60,000 |
 | Batch size × grad-accum | 16 × 1 | 16 × 1 |
 | Steps per epoch | 281 (4,500 clips) | 172 (2,751 clips) |
 | Optimiser | Adam, β 0.9/0.98, ε 1e-9, weight decay 0 | same |
-| Learning rate | Noam schedule on `256^-0.5`: peak ≈ 9.9e-4 at step 4,000, ×0.3 at 20k/26k/33k, ≈ 6.9e-6 at 60k | same schedule, anneal points pending |
+| Learning rate | Noam schedule on `256^-0.5`: peak ≈ 9.9e-4 at step 4,000, ×0.3 at 20k/26k/33k, ≈ 6.9e-6 at 60k | same schedule and anneal points, so the two runs are comparable |
 | Warm-up | 4,000 steps | 4,000 steps |
 | Gradient clipping | 1.0 | 1.0 |
 | Validation / synthesis | every 1,000 steps | every 1,000 steps |
 | Checkpoints | every 2,500 steps (5,000 for the first 30,000 steps) | every 5,000 steps |
-| Hardware | Kaggle GPU T4 x2, PyTorch 2.11.0+cu130, `nn.DataParallel` (batch 16 = 8+8) | same once the GPU slot frees |
-| Measured step time | **0.511 s/step** mean over the first 32,000 steps (4 h 32 m 45 s of tqdm clock); the 300-step calibration had said 0.304 s/step | **PENDING** |
-| Wall clock | ≈ 8.5 h for 60,000 steps at the measured mean, not the 5.3 h the calibration implied | **PENDING** |
-| Budget rationale | 60,000 steps ≈ 213 epochs; the reference 900,000 steps is unattainable and would leave the learning rate flat, so the anneal points were scaled to keep the reference fractions (33/43/55 %) | same logic once the step time is measured |
+| Hardware | Kaggle GPU T4 x2, PyTorch 2.11.0+cu130, `nn.DataParallel` (batch 16 = 8+8) | Kaggle GPU T4 x2, `nn.DataParallel` (8+8) |
+| Measured step time | **0.511 s/step** mean over the first 32,000 steps (4 h 32 m 45 s of tqdm clock); the 300-step calibration had said 0.304 s/step | **0.341 s/step** over the first 220 steps (75 s of clock, 3.4 it/s average) |
+| Wall clock | ≈ 8.5 h for 60,000 steps at the measured mean, not the 5.3 h the calibration implied | ≈ 5.7 h for 60,000 steps at the measured rate |
+| Budget rationale | 60,000 steps ≈ 213 epochs; the reference 900,000 steps is unattainable and would leave the learning rate flat, so the anneal points were scaled to keep the reference fractions (33/43/55 %) | same logic; 60,000 steps ≈ 349 epochs of a smaller split |
 
 **Run interruption at step 32,000.** The first English run was killed by the Linux OOM killer, not by a code or GPU
 error: the log contains no `Traceback` and no CUDA out-of-memory exception, and the session panel had reached 30/30
@@ -187,7 +187,16 @@ minutes instead of ~45, and `utils/tools.py log()` now closes the matplotlib fig
 the one object created on every synthesis and validation step that nothing else released. The learning-rate schedule
 is seeded from `restore_step`, so resuming at 30,000 reproduces exactly the LR the uninterrupted run would have had.
 
-## 7. Loss analysis — resumed English run (steps 30,000–60,000); checkpoint comparison **PENDING**
+**Two hard resource ceilings on the training host.** The Kaggle session has **30 GiB of RAM** and a **20 GiB working
+volume**, and the English run reached both: the OOM killer ended it at step 32,000, and checkpoints at 2,500-step
+spacing would have filled the volume (24 saves × 418 MB ≈ 10 GB of a ~20 GB disk that also holds 2 GB of features and
+audio). The Telugu run was configured against those ceilings before it started, not after it failed: `save_step` was
+raised from 2,500 to 5,000, which fits twelve saves in the 8 GiB that were free on the volume and still caps the loss
+from a crash at roughly 42 minutes; the pre-launch check measures free disk and refuses to start below 5 GiB; and
+every checkpoint is written to a temporary file and moved into place atomically, so an interrupted save leaves a
+`.tmp` rather than a corrupt `.pth.tar`.
+
+## 7. Loss analysis and checkpoint comparison
 
 The figures below are from the clean loss CSVs produced after resuming from the preserved 30,000-step checkpoint.
 They cover only the resumed segment (approximately steps 30,000–60,000), not the full run from initialization.
@@ -218,16 +227,50 @@ step; use the validation CSV for that comparison.
 
 ### 7.3 Convergence, generalisation and checkpoint selection
 
-- **Training behaviour:** the resumed training completed all 60,000 steps without a reported runtime failure. The
-  resumed-segment training curve is noisy and largely flat; do not infer continued improvement from step count alone.
-- **Validation behaviour:** validation loss is broadly stable in the plotted resumed segment, with the final recorded
-  total of 4.0910. This segment does not by itself establish which checkpoint produces the best validation result.
-- **Checkpoint selection:** compare the exact validation CSV rows against available checkpoint steps before choosing
-  an inference checkpoint. In addition, listen to generated speech; validation loss is not a substitute for an
-  intelligibility and naturalness review.
-- **Scope limitation:** a complete curve from initialization is unavailable because overlapping runs contaminated
-  the earlier shared logs. Keep the pre-resume log values separate and disclose this limitation rather than presenting
-  a stitched curve as one continuous run.
+- **Training behaviour:** the run completed all 60,000 steps without a runtime failure after the step-32,000 restart.
+  The resumed-segment training curve is noisy and largely flat, so step count alone does not indicate improvement.
+- **Generalisation gap:** training mel L1 settles near **0.62** while validation mel L1 stays near **1.05**; validation
+  pitch MSE is **0.68** and energy MSE **1.15** against a 1.0 "always predict the mean" baseline. A model that
+  reproduces its training mel to 0.62 but only reaches 1.05 on held-out text is overfitting, not underfitting.
+- **Where validation bottoms out:** the pre-restart validation records — which are *not* reliable, because two
+  processes wrote the same log files — put the minimum near step 7,000, after which validation rose to 4.0910 at
+  step 60,000 while training loss kept falling. The direction is consistent with overfitting even though the exact
+  step is not trustworthy.
+- **Checkpoint selection:** loss rank and listener rank do not agree (§7.4), so the shipped checkpoint was chosen by
+  listening, with the ASR and loss numbers reported alongside rather than used to override the ear.
+
+### 7.4 Four checkpoints, measured the same way
+
+Every retained checkpoint was decoded on CPU through the shipping HiFi-GAN vocoder, on the same five sentences, with
+the phoneme sequences taken from the saved inference payloads. "Pitch std" and "energy std" are the standard deviation
+of the predicted *normalised* values; the ground truth for a correctly modelled speaker is 1.00, so a value near 0.3
+means the predictor is producing a near-constant contour.
+
+| Checkpoint | Validation total loss | ASR WER † | Pitch std | Energy std | Mean frames | Listener |
+|---|---|---|---|---|---|---|
+| 5,000 | not recoverable ‡ | **1.04** | 0.24 | 0.36 | 413 | **5/10** — noisy, unstable pitch |
+| 10,000 | not recoverable ‡ | 1.27 | 0.32 | 0.38 | 403 | not rated |
+| 35,000 | 4.0838 | 1.21 | 0.33 | 0.45 | 392 | previous deliverable |
+| 60,000 | 4.0910 | 1.15 | 0.34 | 0.45 | 393 | **7/10** — clearer, some words missed, noise at the end |
+
+† Mean WER over E1, E2a, E2b and E3 (lower is better). E4 is excluded because the frontend expands `10:45 AM` and
+`12 November 2026` into words, so its WER is inflated by normalisation rather than by acoustics. WER 1.0 means every
+word is an error.
+‡ The pre-restart loss logs are contaminated by overlapping processes, so no loss value can be attached to checkpoints
+5,000 and 10,000.
+
+The three rankings disagree, and the disagreement is the finding:
+
+- **Validation loss** would pick 35,000.
+- **ASR WER** would pick 5,000 — but at WER ≈ 1.0 the metric saturates, so 1.04 versus 1.15 is the ordering of two
+  failures, measured on four sentences, not a quality difference.
+- **The listener** picks 60,000: clearer and more sentence-like than 5,000, with some words dropped and audible noise
+  at the end of the clip.
+
+Neither loss nor ASR is a usable proxy for perceptual quality in this regime, and with five sentences and one listener
+the subjective ranking should be read as an engineering judgment, not a statistically established result. The shipped
+audio uses **60,000**, because the deliverable is judged by listening and because 5,000 sounds materially worse despite
+its marginally better WER.
 
 ## 8. Test-sentence observations — text side measured, listening side **PENDING**
 
@@ -276,30 +319,39 @@ Stored in `docs/test_sentences.json` under `final` and used unchanged by `infere
 
 All ten encode without an unknown-character error, which is the precondition for inference.
 
-### 8.2 Initial English listening feedback and diagnosis
+### 8.2 The English failure, isolated by controls
 
-The five English test sentences were synthesised in Kaggle with checkpoint step 35,000. Initial listener feedback
-reports that E1, E2a, E2b, E3 and E4 all sound incorrect or unintelligible. For E2a, the listener reports that a
-speech-recognition transcript rendered in Telugu script resembled “a test class complete … my voice was …”; the
-recognizer and its language setting were not recorded, so this transcript is not evidence that the acoustic model
-used Telugu symbols or that the generated waveform is Telugu.
+The first listener pass reported that all five sentences sounded wrong. Rather than infer a cause, five properties of
+the pipeline were tested independently on the same checkpoints. Each test was chosen so that a plausible explanation
+would produce a specific, visible result.
 
-The inference console for E2a prints the expected English ARPAbet phone sequence for the supplied sentence, and its
-prediction JSON identifies `language: en`, `checkpoint_step: 35000`, and English ARPAbet symbols. The WAVs are
-mono 22,050 Hz files with non-zero signal, and for each sentence the predicted symbol-duration sum equals the
-reported mel-frame count. These checks rule out an obvious wrong-language frontend, wrong-language checkpoint path,
-or truncated/empty output; they do not establish intelligibility or naturalness.
+| Test | Method | Result | Explanation it rules out |
+|---|---|---|---|
+| Duration integration | Sum the predicted per-symbol durations and compare with the mel length, all four checkpoints | Exact match every time (e.g. 504 frames / 504) | Text and frames falling out of step in the length regulator |
+| Vocoder fidelity | Re-encode the vocoder's own waveform and compare against the mel it was given | Mel L1 0.234–0.275; spectral flatness 0.006–0.020; no clipping | A broken vocoder, a wrong mel range, or a silent/clipped waveform |
+| Text conditioning | Shuffle E1's phoneme IDs, and separately substitute E3's IDs into E1's length | Mel moves by L1 1.098 and 1.167, against 1.058 between two genuinely different sentences | The model ignoring the text or receiving the wrong language |
+| Variance spread | Standard deviation of the predicted normalised pitch and energy | Pitch 0.24–0.34, energy 0.36–0.45 against a ground truth of 1.00, at *every* checkpoint | Any checkpoint restoring expressiveness; all four collapse toward the mean |
+| Intelligibility | Transcribe all twenty clips with `facebook/wav2vec2-base-960h`, after validating the same stack on real speech | WER 1.04–1.27 (see §7.4); control on LibriSpeech **0.000 / 0.000 / 0.031** | The waveform being structurally sound but the probe being at fault |
 
-The observed quality issue is therefore most consistent with poor acoustic-model generalisation or a training/data
-alignment problem, rather than Telugu frontend leakage. The quantitative evidence supports caution: step 60,000
-training loss is 1.2577 while validation loss is 4.0910, and the resumed training curve remains much lower than its
-validation curve. Kaggle reports `speakers.json` as `{"female": 0, "male": 1}`, and inference used speaker ID 0, so
-the selected ID is valid and corresponds to the female training speaker; a speaker-ID mismatch is not supported as
-the cause. The speech-recognition transcript rendered in Telugu script may reflect a recognizer language/configuration
-mismatch, but the recognizer settings and transcript confidence are unavailable, so that explanation is unverified.
-No single acoustic-quality root cause is confirmed. Next diagnostic work should inspect the train/validation
-text-to-phone and duration pairing for representative clips and compare listening across candidate checkpoints; do
-not describe the current output as successful speech.
+Three further observations point the same way. The output is tonal rather than noisy, so the model is generating
+speech-like structure, not artefacts. The predicted mel marginals are normal (median ≈ −5.5, 99th percentile ≈ −0.5),
+so the model is not emitting out-of-distribution values. And a Griffin-Lim decode of the same predicted mel is no more
+intelligible than the HiFi-GAN decode (mel L1 0.700–0.740), which means the content is already wrong before the vocoder
+sees it.
+
+**Conclusion.** The pipeline is correct at every stage that can be checked in isolation, and the model output is
+speech-shaped but wrong. That is a generalisation failure: 4.842 h of two-speaker, ASR-oriented read/spontaneous
+English is not enough for a 35-million-parameter model to learn pronunciation it has not seen, and training loss
+(1.2577) sits far below validation loss (4.0910). No inference-side fix exists — all four retained checkpoints fail
+the same way, and the one the listener prefers (60,000) is not the one the loss prefers (35,000) or the one the ASR
+prefers (5,000). Fixing it requires changing the data or the training design, both of which are outside the remaining
+GPU budget, so it is reported here as a diagnosed negative result rather than presented as working speech.
+
+Two caveats bound that conclusion. The ASR is a LibriSpeech acoustic model, so Indian-accented and synthetic speech is
+out of its domain; WER 1.0 should be read as "not recoverable" rather than as a precise word error rate. And the
+subjective scores come from one listener over five sentences, so the 5/10-to-7/10 ranking is engineering judgment, not
+a controlled perceptual study. Neither caveat weakens the diagnosis, because the control battery does not depend on
+either: the vocoder, the durations and the conditioning were all measured directly.
 
 Frontend caveats:
 

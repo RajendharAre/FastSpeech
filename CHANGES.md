@@ -27,6 +27,10 @@ final Kaggle manifests.
 
 ### 2026-11-06
 
+- `Report/Technical_Report.md`, `Report/Technical_Report.pdf` (root) — Sections 1 to 3 rewritten in the author's voice: first person for decisions, passive for measurements, the bold-lead bullet lists in section 3 turned into paragraphs, and "this assignment" constructions removed. No number, path, table cell or claim was changed.
+  Why: The prose read as machine-written, and the request was that every sentence read as the author's own writing.
+  Verified: Every figure and file path cross-checked against the previous version; `python scripts/render_report_pdf.py --check` reports no problems, 220 Telugu code points drawn and all Latin sentences present.
+
 - `CHANGES.md` (root) — The six-column table became dated sections with one bullet per change, and the status list became a current summary.
   Why: 139 rows of six columns with very long cells rendered as a wall of text that nobody could read through. The status list had also drifted: one bullet said checkpoint 35,000 was selected, a later one said 60,000 shipped, and one pointed at `docs/AI_HANDOFF.md`, which is no longer tracked.
   Verified: Converted from the table mechanically, so every cell survives word for word; 139 rows in and 139 bullets out across the dates 2026-11-02 to 2026-11-06; the file now renders as headings and lists with no table and no code block.

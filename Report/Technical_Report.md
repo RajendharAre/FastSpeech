@@ -21,26 +21,29 @@ Section map against the seven items the assignment PDF asks the report to cover:
 
 ## 1. Approach
 
-FastSpeech 2 is a feed-forward, non-autoregressive text-to-speech model. Instead of an attention-based
-autoregressive decoder, it predicts a mel-spectrogram in a single pass: the text is encoded by a Transformer encoder,
-a length regulator expands each text position to the number of frames it will occupy, and the decoder produces the
-mel-spectrogram directly. Because there is no attention to supply alignment, the model predicts the alignment itself
-with a **duration predictor**, and it also predicts two other "variance" signals that a mel-spectrogram alone would
-otherwise leave to the vocoder: **pitch (F0)** and **energy**. Each predicted value is embedded and added back to the
-expanded text representation by the variance adaptor before decoding. The original paper supplies the durational
-supervision by distillation from an autoregressive teacher; this assignment instead derives durations from forced
-alignment, which is the simpler and fully reproducible route.
+FastSpeech 2 is a feed-forward, non-autoregressive text-to-speech model. There is no attention-based
+autoregressive decoder. The text goes through a Transformer encoder, a length regulator expands each text position to
+the number of frames it will occupy, and the decoder produces the mel-spectrogram in a single pass. Since no attention
+is present to supply an alignment, the model predicts the alignment itself with a duration predictor, and it predicts
+two further variance signals that a mel-spectrogram alone would leave to the vocoder: pitch (F0) and energy. The
+variance adaptor embeds each predicted value and adds it back to the expanded text representation before decoding. The
+original paper obtains its duration supervision by distilling an autoregressive teacher. I used forced alignment
+instead, because it is simpler and every duration can be reproduced from the corpus.
 
-Two independent models are trained from scratch, one per language. No pretrained acoustic-model weights are used. The
-only external pretrained component is the HiFi-GAN vocoder, which converts mel-spectrograms to waveforms; the
-assignment allows a pretrained vocoder and the reference repository ships one.
+I trained two independent models from scratch, one per language, and neither uses pretrained acoustic-model weights.
+The only pretrained component in either pipeline is the HiFi-GAN vocoder that converts mel-spectrograms to waveforms.
+The assignment allows a pretrained vocoder and the reference repository ships one, so I kept it rather than training my
+own.
 
-The starting point is `https://github.com/ming024/FastSpeech2` at commit `d4e79eb` (MIT licence). `LICENSE` and
-`THIRD_PARTY_NOTICES.md` are kept in the repository. Each language folder is self-contained: it carries its own copy of
+My starting point was `https://github.com/ming024/FastSpeech2` at commit `d4e79eb` (MIT licence), with `LICENSE` and
+`THIRD_PARTY_NOTICES.md` kept in the repository. Each language folder is self-contained: it carries its own copy of
 `audio/`, `model/`, `preprocessor/`, `text/`, `transformer/`, `utils/`, `dataset.py`, `evaluate.py`, `hifigan/` and its
 own `config.yaml`.
 
 ## 2. Architecture components taken from the reference implementation
+
+I did not change the architecture. Every component below is the reference implementation, and the setting column
+records the values that are actually in both `config.yaml` files.
 
 | Component | Reference path | Setting used |
 |---|---|---|
@@ -53,49 +56,42 @@ own `config.yaml`.
 | Acoustic model size | — | 35,159,617 parameters (measured by the CPU smoke test) |
 | Vocoder | `hifigan/` | HiFi-GAN **universal** generator, pretrained, 22.05 kHz, 80 mel bins, hop 256, `mel_fmax` 8000 Hz |
 
-Mel front-end: 22,050 Hz, `filter_length` 1024, `hop_length` 256, `win_length` 1024, 80 mel channels, F0 range
-`[0, 8000]` Hz. Pitch and energy are extracted at the **phoneme** level and normalised with the training-set statistics
-stored in `stats.json`. `max_seq_len` is 1000 frames, with a margin of 20 frames imposed by the preprocessor, so a clip
-whose mel exceeds 980 frames (250,879 samples ≈ 11.38 s) is dropped rather than silently truncated at training time.
+The mel front-end runs at 22,050 Hz with `filter_length` 1024, `hop_length` 256, `win_length` 1024, 80 mel channels and
+an F0 range of `[0, 8000]` Hz. Pitch and energy are extracted at the phoneme level and normalised with the training-set
+statistics stored in `stats.json`. `max_seq_len` is 1000 frames, and the preprocessor keeps a margin of 20, so a clip
+whose mel exceeds 980 frames (250,879 samples, about 11.38 s) is dropped rather than truncated silently at training time.
 
 ## 3. Modifications to the reference implementation
 
-Both languages:
+The changes split into those I made in both languages and those that belong to one frontend.
 
-- **One configuration file per language** with the four sections the assignment requires (`preprocess`, `model`,
-  `train`, `inference`), replacing the reference's three YAML files. `utils/config.py` loads and validates it, so a bad
-  value fails before a long job starts.
-- **Manifest-driven preprocessing** instead of the reference's random split: `manifests/train.csv` and
-  `manifests/val.csv` are fixed inputs, built once with a fixed seed, and no clip appears in both.
-- **Full drop accounting**: every clip that cannot be used is classified (alignment, missing TextGrid, missing audio,
-  pitch, feature statistics, transcript, too long) and written to `preprocessing_log.csv`.
-- **Training instrumentation**: fixed seed, per-step CSV loss logs (`logs/train/train_loss.csv`,
-  `logs/val/val_loss.csv`), configurable `log_step` / `val_step` / `synth_step` / `save_step`, checkpoint resume that
-  restores RNG state, and a final checkpoint written even when `total_step` is not a multiple of `save_step`.
-- **`inference.py`** replaces the reference's interactive `synthesize.py` single-sentence mode: it reads
-  `docs/test_sentences.json`, refuses to run while any sentence's `final` field is null, and writes
-  `<ID>.wav` to `Results/<Language>/test_generated_audios/`.
+Both languages share four changes. Each has a single `config.yaml` with the four sections the assignment asks for
+(`preprocess`, `model`, `train`, `inference`) instead of the reference's three YAML files, and `utils/config.py`
+validates it on load, so a bad value fails before a long job starts. Preprocessing is driven by fixed manifests,
+`manifests/train.csv` and `manifests/val.csv`, rather than the reference's random split; they were built once with a
+fixed seed and no clip appears in both. Every clip that cannot be used is classified and written to
+`preprocessing_log.csv`, so a drop becomes a number in a file instead of a silence. Training writes its losses per step
+to `logs/train/train_loss.csv` and `logs/val/val_loss.csv`, takes `log_step`, `val_step`, `synth_step` and `save_step`
+from the config, restores RNG state when it resumes, and writes a final checkpoint even when `total_step` is not a
+multiple of `save_step`.
 
-English:
+`inference.py` replaces the reference's interactive `synthesize.py`. It reads `docs/test_sentences.json`, stops while
+any `final` field is null, and writes `<ID>.wav` to `Results/<Language>/test_generated_audios/`.
 
-- Reference English frontend kept (ARPAbet lexicon + G2P), with a rule-based normaliser for numbers, dates, times and
-  abbreviations, and an optional supplementary G2P dictionary for proper names. The normalisation is applied to the
-  transcript only; the stored test sentences are not edited.
-- Forced alignment with MFA `english_us_arpa`. Out-of-vocabulary rate on the corpus was 4.47 %, handled with the
-  bundled G2P model.
+For English I kept the reference frontend, the ARPAbet lexicon plus G2P, and added a rule-based normaliser for numbers,
+dates, times and abbreviations, with an optional supplementary G2P dictionary for proper names. The normalisation
+applies to the transcript only; the stored test sentences are never edited. Forced alignment used MFA
+`english_us_arpa`. The out-of-vocabulary rate on the corpus was 4.47 %, and MFA's bundled G2P model resolved it.
 
-Telugu:
-
-- **Character-level frontend** (`text/telugu.py` + a frozen Telugu symbol table in `text/symbols.py`): NFC
-  normalisation, whitespace and format-control handling, punctuation folding, and explicit unknown-character errors.
-  The symbol IDs come from an explicit code-point range list rather than `unicodedata`, so they do not change with the
-  Python version.
-- **No Telugu lexicon or phoneme set was invented.** A grapheme-dictionary MFA aligner was trained on the corpus
-  itself (each word mapped to its space-separated characters) to obtain phone-level durations on the character tier.
-- The preprocessor requires `len(text_to_sequence(text)) == len(duration)`; the `.lab` used for each clip therefore
-  contains the alignment text, not the raw dataset transcript.
-- Telugu number/date/time normalisation in `T4` is **not implemented**; see §9 for how this is reported as a failure
-  rather than hidden. *(PENDING confirmation against the final frontend behaviour.)*
+For Telugu the frontend is character-level (`text/telugu.py` plus a frozen symbol table in `text/symbols.py`). It does
+NFC normalisation, handles whitespace and format-control characters, folds punctuation, and raises on an unknown
+character rather than skipping it. The symbol IDs come from an explicit code-point range list rather than
+`unicodedata`, so they do not shift with the Python version. I did not invent a Telugu lexicon or phoneme set. Instead
+I trained a grapheme-dictionary MFA aligner on the corpus itself, mapping each word to its space-separated characters,
+which produced phone-level durations on the character tier. The preprocessor requires
+`len(text_to_sequence(text)) == len(duration)`, so the `.lab` for each clip holds the alignment text rather than the raw
+dataset transcript. Telugu number, date and time normalisation is not implemented, so the digits and punctuation in T4
+reach the model exactly as written; §8.1 measures that, and §9 reports it as a failure rather than hiding it.
 
 ## 4. Datasets, selection and subsampling
 

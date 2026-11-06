@@ -58,6 +58,26 @@ class HtmlTest(unittest.TestCase):
         self.assertIn("ReportTelugu", html)
         self.assertIn("data:font/ttf;base64,", html)
 
+    def test_relative_report_images_are_embedded(self):
+        with tempfile.TemporaryDirectory() as tempdir:
+            report_dir = os.path.join(tempdir, "Report")
+            image_dir = os.path.join(tempdir, "Results", "English")
+            os.makedirs(report_dir)
+            os.makedirs(image_dir)
+            with open(os.path.join(image_dir, "loss.png"), "wb") as handle:
+                handle.write(b"\x89PNG\r\n\x1a\n")
+            html = to_html(
+                "![loss](../Results/English/loss.png)\n",
+                markdown_path=os.path.join(report_dir, "Technical_Report.md"),
+            )
+        self.assertIn("data:image/png;base64,", html)
+
+    def test_missing_relative_report_image_fails_loudly(self):
+        with tempfile.TemporaryDirectory() as tempdir:
+            report_path = os.path.join(tempdir, "Technical_Report.md")
+            with self.assertRaises(FileNotFoundError):
+                to_html("![missing](missing.png)\n", markdown_path=report_path)
+
 
 class BrowserTest(unittest.TestCase):
     def test_found_browser_exists(self):

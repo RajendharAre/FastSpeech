@@ -1,11 +1,11 @@
 # English checkpoints
 
-No checkpoint yet: the English model has not been trained (Phase 5).
+The Kaggle training log reports completion at step 60,000 and a save of
+`checkpoints/60000.pth.tar`. The checkpoint is stored in the Kaggle working
+directory and has not yet been backed up to a durable location.
 
-When training runs, each checkpoint is saved as `checkpoints/<step>.pth.tar` and
-is git-ignored. If a checkpoint exceeds 100 MB, upload it to the Hugging Face Hub
-and record here:
+Checkpoint files are git-ignored. After backing up the final checkpoint, record:
 
-- step:
-- Hugging Face Hub URL:
-- training config used (git commit or config checksum):
+- step: 60,000
+- Hugging Face Hub URL: pending
+- training config used (git commit or config checksum): pending

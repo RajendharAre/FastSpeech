@@ -21,23 +21,26 @@ progress as of this writing; nothing below is a generated-speech result.
 | Speakers | 2 (one female, one male) | 1 (male) |
 | Dropped, by category | 260 (alignment 164, missing TextGrid 71, pitch 20, feature stats 4, transcript 1) | 94 (alignment 83, missing TextGrid 3, missing audio 8) |
 | Aligner | MFA `english_us_arpa` + G2P for 4.47 % OOV | MFA grapheme dictionary trained on the corpus |
-| Training | 60,000 steps at a measured 0.304 s/step on Kaggle T4x2, running | not started (single Kaggle GPU slot) |
+| Training | Reached 60,000 steps; step 35,000 had the lowest validation loss among the clean resumed-run candidates, and five inference WAVs were generated; backups and listening review remain | not started (single Kaggle GPU slot) |
 | Audio provenance | exported at 22.05 kHz | **16 kHz source upsampled to 22.05 kHz** |
 
-Still to do before submission: Telugu calibration and training, checkpoint
-selection, inference on the ten test sentences, the loss and variance-adaptor
-PNGs, the final report, and re-running `scripts/check_no_overlap.py` against the
-final Kaggle manifests (disjointness was reported by the splitter when the
-manifests were built, but the check script has not been run on those files).
+Still to do before submission: back up the selected English checkpoint and
+inference outputs, complete the English listening/quality diagnosis, Telugu calibration
+and training, Telugu variance-adaptor PNGs, the final report, and re-running
+`scripts/check_no_overlap.py` against the final Kaggle manifests (disjointness
+was reported by the splitter when the manifests were built, but the check
+script has not been run on those files).
 
 Completed work: Phase 0 (skeleton), Phase 1 (dataset inspection), the
 pre-training infrastructure fixes (environment, training control, preprocessing
 drop accounting), alignment QC, English rule-based normalisation with rule
 provenance in the manifests, the G2P supplementary-dictionary builder, the
 variance-adaptor plot/array export in `inference.py` and the loss-CSV plotting
-script. The interim English loss analysis, including the finding that validation
-loss has risen since step 7,000 while training loss keeps falling, is in
-`Report/Technical_Report.md` section 7. The assignment PDF is at
+script. The resumed English training and validation loss plots are in
+`Results/English/`; English inference at checkpoint step 35,000 generated five
+WAVs plus duration, pitch, and energy plots/JSONs in the Kaggle working copy.
+Section 7 of `Report/Technical_Report.md` discusses the plots' scope and the
+earlier overlapping-run log limitation. The assignment PDF is at
 `docs/FastSpeech2_Assignment (1).pdf`; the requirement-by-requirement audit is
 `docs/REQUIREMENTS_AUDIT.md`. See `docs/PLAN_PHASES.md` for the plan and
 `CHANGES.md` for every change.
@@ -65,7 +68,7 @@ scripts/                 split_dataset.py, check_no_overlap.py,
                          plot_training_losses.py
 Results/English|Telugu/  loss plots, generated audio, variance-adaptor plots (Phase 5-6)
 Report/                  Technical_Report.md and the built Technical_Report.pdf
-docs/                    assignment notes and dataset report
+docs/                    assignment notes, dataset report, agent handoff
 kaggle/                  dataset inspection scripts, Kaggle run guide and bootstrap.sh
 ```
 

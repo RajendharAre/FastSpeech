@@ -14,6 +14,7 @@ check exists to catch.
 
 import argparse
 import base64
+import mimetypes
 import os
 import re
 import shutil
@@ -54,6 +55,7 @@ blockquote { margin: 0.7em 0; padding: 6px 10px; border-left: 3px solid #888;
              background: #f7f7f2; color: #333; }
 blockquote p { margin: 0; }
 hr { border: none; border-top: 1px solid #ccc; margin: 1.4em 0; }
+img { max-width: 100%%; height: auto; }
 """
 
 
@@ -73,10 +75,35 @@ def telugu_face(font_path):
     return face, "'ReportTelugu',"
 
 
-def to_html(markdown_text, font_path=None):
+def to_html(markdown_text, font_path=None, markdown_path=None):
     from markdown_it import MarkdownIt
 
     body = MarkdownIt("commonmark").enable("table").render(markdown_text)
+    if markdown_path is not None:
+        markdown_dir = Path(markdown_path).resolve().parent
+
+        def embed_image(match):
+            source = match.group(2)
+            if source.startswith(("data:", "http:", "https:", "file:")):
+                return match.group(0)
+            image_path = (markdown_dir / source).resolve()
+            if not image_path.is_file():
+                raise FileNotFoundError(
+                    "report image not found: {} (referenced by {})".format(
+                        image_path, markdown_path
+                    )
+                )
+            media_type = mimetypes.guess_type(image_path.name)[0] or "application/octet-stream"
+            encoded = base64.b64encode(image_path.read_bytes()).decode("ascii")
+            return '{}data:{};base64,{}{}'.format(
+                match.group(1), media_type, encoded, match.group(3)
+            )
+
+        body = re.sub(
+            r'(<img\b[^>]*\bsrc=["\'])([^"\']+)(["\'])',
+            embed_image,
+            body,
+        )
     face, stack = telugu_face(font_path) if font_path else ("", "")
     css = CSS % {"telugu_stack": stack}
     return (
@@ -163,7 +190,11 @@ def main():
         sys.exit("No Chrome or Edge found. Set REPORT_BROWSER to the executable path.")
 
     md_path = Path(args.md)
-    html = to_html(md_path.read_text(encoding="utf-8"), args.telugu_font)
+    html = to_html(
+        md_path.read_text(encoding="utf-8"),
+        args.telugu_font,
+        markdown_path=md_path,
+    )
 
     work_dir = Path(tempfile.mkdtemp(prefix="report_pdf_"))
     html_path = work_dir / "Technical_Report.html"

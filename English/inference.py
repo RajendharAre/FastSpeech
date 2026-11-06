@@ -22,6 +22,7 @@ from text.normalise import normalise_english
 from text.symbols import symbols as SYMBOLS
 from utils.config import load_config
 from utils.model import get_vocoder, vocoder_infer
+from utils.train_utils import load_checkpoint
 from utils.tools import to_device
 
 matplotlib.use("Agg")
@@ -393,7 +394,7 @@ def main(args):
         )
 
     model = FastSpeech2(preprocess_config, model_config).to(device)
-    ckpt = torch.load(ckpt_path, map_location=device)
+    ckpt = load_checkpoint(ckpt_path, device)
     model.load_state_dict(ckpt["model"])
 
     vocoder = get_vocoder(model_config, device)

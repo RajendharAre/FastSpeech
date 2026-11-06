@@ -1,9 +1,9 @@
 # Technical Report — FastSpeech 2 (English and Telugu)
 
 **Status: draft.** Sections 1–6 and section 11 are written from measured values that are recorded in `CHANGES.md`.
-Section 7 holds an interim reading of the English run and its final version, and sections 8 (listening), 9 and 10,
-need artefacts that do not exist yet — finished training, generated audio and variance plots. They are marked
-**PENDING**; no number or observation has been invented for them.
+Section 7 includes the resumed English-run plots, but a full checkpoint comparison remains pending. English inference
+audio and variance plots now exist; section 8 records preliminary listener feedback, while detailed listening review,
+section 9 analysis and the Telugu-dependent comparison in section 10 remain pending.
 
 Section map against the seven items the assignment PDF asks the report to cover:
 
@@ -11,8 +11,8 @@ Section map against the seven items the assignment PDF asks the report to cover:
 |---|---|
 | Implementation approach, architecture components, modifications per language | 1, 2, 3 |
 | Dataset selection, subsampling, preprocessing, split, training configuration | 4, 5, 6 |
-| Loss-curve analysis: convergence, instability, overfitting | 7 (interim; final **PENDING**) |
-| Generated-speech observations per test sentence (pronunciation, quality) | 8 (text side measured; listening **PENDING**) |
+| Loss-curve analysis: convergence, instability, overfitting | 7 (resumed-run plots reviewed; full checkpoint comparison **PENDING**) |
+| Generated-speech observations per test sentence (pronunciation, quality) | 8 (text side measured; initial listener feedback recorded; detailed review **PENDING**) |
 | Variance-adaptor analysis (duration, F0, energy) per test sentence | 9 (**PENDING**) |
 | English vs Telugu comparison, limitations, failures, improvements | 10 (**PENDING**) |
 | Reproducibility: dependencies, configs, commands | 11 |
@@ -187,62 +187,47 @@ minutes instead of ~45, and `utils/tools.py log()` now closes the matplotlib fig
 the one object created on every synthesis and validation step that nothing else released. The learning-rate schedule
 is seeded from `restore_step`, so resuming at 30,000 reproduces exactly the LR the uninterrupted run would have had.
 
-## 7. Loss analysis — interim reading (steps 100–25,000); final version **PENDING**
+## 7. Loss analysis — resumed English run (steps 30,000–60,000); checkpoint comparison **PENDING**
 
-Source: `logs/train/log.txt` and `logs/val/log.txt` copied out of the running Kaggle session when training had reached
-step 25,000 of 60,000. The final version of this section will use the complete logs and the two PNG plots.
+The figures below are from the clean loss CSVs produced after resuming from the preserved 30,000-step checkpoint.
+They cover only the resumed segment (approximately steps 30,000–60,000), not the full run from initialization.
+The earlier run's shared log and CSVs were written by overlapping training processes, so their pre-resume values
+cannot safely be joined to these curves or used to select a checkpoint. The final step-60,000 validation total loss
+was 4.0910, and the Kaggle log confirms that `checkpoints/60000.pth.tar` was saved.
 
 ### 7.1 Training curve
 
-Total loss falls from 10.0987 at step 100 to 1.1886 at step 25,000. The last twenty logged points average 1.3096 with a
-standard deviation of 0.0810, so the curve is smooth. The only large jump is 2.21 between steps 200 and 300, at the end
-of warm-up; there is no divergence and no loss explosion anywhere in the range.
+![English resumed-run training loss from steps 30,000 to 60,000](../Results/English/training_loss.png)
 
-| Step | Total | Mel | Post-net | Pitch | Energy | Duration |
-|---|---|---|---|---|---|---|
-| 2,000 | 3.4646 | 1.0418 | 1.0928 | 0.5762 | 0.5365 | 0.2174 |
-| 6,000 | 2.3361 | 0.7680 | 0.7685 | 0.3319 | 0.2925 | 0.1752 |
-| 10,000 | 2.5023 | 0.8076 | 0.8076 | 0.3041 | 0.3903 | 0.1927 |
-| 14,000 | 1.6698 | 0.6822 | 0.6819 | 0.1023 | 0.1050 | 0.0984 |
-| 18,000 | 1.5338 | 0.5451 | 0.5450 | 0.1586 | 0.1272 | 0.1578 |
-| 22,000 | 1.3200 | 0.5782 | 0.5778 | 0.0750 | 0.0464 | 0.0426 |
-| 25,000 | 1.1886 | 0.4841 | 0.4838 | 0.0626 | 0.0475 | 0.1105 |
+*Figure 7.1. Training total and component losses for the resumed segment.*
+
+The plotted total loss fluctuates substantially, mostly around 1.1–1.4 with several transient spikes, rather than
+showing a clear downward trend over this resumed segment. Mel and post-net losses remain close together and
+comparatively steady; pitch has the largest visible spikes. These plots describe optimization on the training data,
+not speech quality.
 
 ### 7.2 Validation curve
 
-Validation loss reaches its minimum early and then rises:
+![English resumed-run validation loss from steps 30,000 to 60,000](../Results/English/validation_loss.png)
 
-| Step | Total | Mel | Pitch | Energy | Duration |
-|---|---|---|---|---|---|
-| 1,000 | 3.8787 | 1.0210 | 0.6174 | 0.9921 | 0.2248 |
-| 5,000 | 3.8918 | 0.9946 | 0.6335 | 1.0459 | 0.2262 |
-| **7,000** | **3.8246** | 0.9835 | 0.6343 | 0.9999 | 0.2235 |
-| 15,000 | 4.0304 | 1.0044 | 0.6939 | 1.0697 | 0.2583 |
-| 20,000 | 4.0585 | 1.0127 | 0.6882 | 1.0846 | 0.2604 |
-| 25,000 | 4.0588 | 1.0142 | 0.6811 | 1.0780 | 0.2715 |
+*Figure 7.2. Validation total and component losses for the resumed segment.*
 
-### 7.3 Convergence, instability, overfitting (interim)
+Validation total loss varies within a narrow band near 4.08–4.09 and ends at 4.0910 on step 60,000. The component
+curves are comparatively flat over this interval. The shown scale and image alone do not establish the exact minimum
+step; use the validation CSV for that comparison.
 
-- **Convergence.** Training converged normally; by step 25,000 the total loss is 8.5× lower than at step 100 and the
-  post-net loss has almost caught up with the mel loss, which is the expected behaviour once the post-net stops adding
-  correction on top of a well-predicted mel.
-- **Instability.** None after warm-up. The pitch loss oscillates between about 0.05 and 0.24 across neighbouring
-  thousand-step blocks (e.g. 0.0497 at 24,000 and 0.0626 at 25,000, against 0.2376 at 24,900), which is ordinary
-  mini-batch variance, not divergence.
-- **Overfitting.** Validation loss is now 6.1 % above its best value and has risen monotonically since step 7,000,
-  while training loss fell from 3.44 to 1.19 over the same span. By step 25,000 the training set has been traversed
-  about 89 times (281 steps/epoch, 4,500 training clips). The rise is concentrated in the variance predictors —
-  duration +21 %, energy +9 %, pitch +10 % from step 1,000 to 25,000 — while the mel losses stay flat near 1.01. In
-  other words the acoustic model stops generalising after roughly 25 epochs and the predictors begin to memorise this
-  speaker pair's timing and dynamics.
-- **Consequence for checkpoint selection.** Validation-loss minimum is step 7,000, but checkpoints are written every
-  5,000 steps, so the best available candidates are 5,000, 10,000 and the final one. The final choice will be made by
-  comparing those three on the test sentences, not by validation loss alone; the reason will be stated in the final
-  version of this section.
+### 7.3 Convergence, generalisation and checkpoint selection
 
-Log quality note: eight training log lines (steps 12,100–12,800) are absent from the copied file — a buffering artefact
-of reading the file while training wrote to it. Training itself is continuous, since the validation entries for steps
-12,000 and 13,000 are present.
+- **Training behaviour:** the resumed training completed all 60,000 steps without a reported runtime failure. The
+  resumed-segment training curve is noisy and largely flat; do not infer continued improvement from step count alone.
+- **Validation behaviour:** validation loss is broadly stable in the plotted resumed segment, with the final recorded
+  total of 4.0910. This segment does not by itself establish which checkpoint produces the best validation result.
+- **Checkpoint selection:** compare the exact validation CSV rows against available checkpoint steps before choosing
+  an inference checkpoint. In addition, listen to generated speech; validation loss is not a substitute for an
+  intelligibility and naturalness review.
+- **Scope limitation:** a complete curve from initialization is unavailable because overlapping runs contaminated
+  the earlier shared logs. Keep the pre-resume log values separate and disclose this limitation rather than presenting
+  a stitched curve as one continuous run.
 
 ## 8. Test-sentence observations — text side measured, listening side **PENDING**
 
@@ -291,7 +276,32 @@ Stored in `docs/test_sentences.json` under `final` and used unchanged by `infere
 
 All ten encode without an unknown-character error, which is the precondition for inference.
 
-Two consequences worth stating before listening:
+### 8.2 Initial English listening feedback and diagnosis
+
+The five English test sentences were synthesised in Kaggle with checkpoint step 35,000. Initial listener feedback
+reports that E1, E2a, E2b, E3 and E4 all sound incorrect or unintelligible. For E2a, the listener reports that a
+speech-recognition transcript rendered in Telugu script resembled “a test class complete … my voice was …”; the
+recognizer and its language setting were not recorded, so this transcript is not evidence that the acoustic model
+used Telugu symbols or that the generated waveform is Telugu.
+
+The inference console for E2a prints the expected English ARPAbet phone sequence for the supplied sentence, and its
+prediction JSON identifies `language: en`, `checkpoint_step: 35000`, and English ARPAbet symbols. The WAVs are
+mono 22,050 Hz files with non-zero signal, and for each sentence the predicted symbol-duration sum equals the
+reported mel-frame count. These checks rule out an obvious wrong-language frontend, wrong-language checkpoint path,
+or truncated/empty output; they do not establish intelligibility or naturalness.
+
+The observed quality issue is therefore most consistent with poor acoustic-model generalisation or a training/data
+alignment problem, rather than Telugu frontend leakage. The quantitative evidence supports caution: step 60,000
+training loss is 1.2577 while validation loss is 4.0910, and the resumed training curve remains much lower than its
+validation curve. Kaggle reports `speakers.json` as `{"female": 0, "male": 1}`, and inference used speaker ID 0, so
+the selected ID is valid and corresponds to the female training speaker; a speaker-ID mismatch is not supported as
+the cause. The speech-recognition transcript rendered in Telugu script may reflect a recognizer language/configuration
+mismatch, but the recognizer settings and transcript confidence are unavailable, so that explanation is unverified.
+No single acoustic-quality root cause is confirmed. Next diagnostic work should inspect the train/validation
+text-to-phone and duration pairing for representative clips and compare listening across candidate checkpoints; do
+not describe the current output as successful speech.
+
+Frontend caveats:
 
 - **E4 is normalised correctly.** `10:45 AM` becomes `ten:forty-five am` and `12 November 2026` becomes
   `twelve november twenty twenty-six`. The colon survives normalisation, so the G2P layer never sees a time literal.

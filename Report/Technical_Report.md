@@ -207,11 +207,11 @@ measurement alone.
 
 ## 7. Loss analysis and checkpoint comparison
 
-The figures below are from the clean loss CSVs produced after resuming from the preserved 30,000-step checkpoint.
-They cover only the resumed segment (approximately steps 30,000–60,000), not the full run from initialization.
-The earlier run's shared log and CSVs were written by overlapping training processes, so their pre-resume values
-cannot safely be joined to these curves or used to select a checkpoint. The final step-60,000 validation total loss
-was 4.0910, and the Kaggle log confirms that `checkpoints/60000.pth.tar` was saved.
+I read the figures in this section from the clean loss CSVs written after I resumed from the preserved 30,000-step
+checkpoint, so they cover only the resumed segment, roughly steps 30,000 to 60,000, and not the full run from
+initialisation. The first run's log and CSVs were written by two overlapping training processes, so I did not join their
+pre-resume values to these curves or use them to pick a checkpoint. The final validation total loss at step 60,000 was
+4.0910, and the Kaggle log confirms that `checkpoints/60000.pth.tar` was saved.
 
 ### 7.1 Training curve
 
@@ -219,10 +219,9 @@ was 4.0910, and the Kaggle log confirms that `checkpoints/60000.pth.tar` was sav
 
 *Figure 7.1. Training total and component losses for the resumed segment.*
 
-The plotted total loss fluctuates substantially, mostly around 1.1–1.4 with several transient spikes, rather than
-showing a clear downward trend over this resumed segment. Mel and post-net losses remain close together and
-comparatively steady; pitch has the largest visible spikes. These plots describe optimization on the training data,
-not speech quality.
+Over the resumed segment the training total loss moves around 1.1 to 1.4 with several transient spikes and no clear
+downward trend. Mel and post-net losses stay close together and comparatively steady; pitch has the largest visible
+spikes. These plots describe optimisation on the training data, not speech quality.
 
 ### 7.2 Validation curve
 
@@ -230,30 +229,34 @@ not speech quality.
 
 *Figure 7.2. Validation total and component losses for the resumed segment.*
 
-Validation total loss varies within a narrow band near 4.08–4.09 and ends at 4.0910 on step 60,000. The component
-curves are comparatively flat over this interval. The shown scale and image alone do not establish the exact minimum
-step; use the validation CSV for that comparison.
+Validation total loss varies inside a narrow band near 4.08 to 4.09 and ends at 4.0910 on step 60,000, and the component
+curves are comparatively flat over the same interval. The plotted scale is not fine enough for me to read the exact
+minimum step off the image, so the checkpoint comparison in §7.4 uses the validation CSV instead.
 
 ### 7.3 Convergence, generalisation and checkpoint selection
 
-- **Training behaviour:** the run completed all 60,000 steps without a runtime failure after the step-32,000 restart.
-  The resumed-segment training curve is noisy and largely flat, so step count alone does not indicate improvement.
-- **Generalisation gap:** training mel L1 settles near **0.62** while validation mel L1 stays near **1.05**; validation
-  pitch MSE is **0.68** and energy MSE **1.15** against a 1.0 "always predict the mean" baseline. A model that
-  reproduces its training mel to 0.62 but only reaches 1.05 on held-out text is overfitting, not underfitting.
-- **Where validation bottoms out:** the pre-restart validation records — which are *not* reliable, because two
-  processes wrote the same log files — put the minimum near step 7,000, after which validation rose to 4.0910 at
-  step 60,000 while training loss kept falling. The direction is consistent with overfitting even though the exact
-  step is not trustworthy.
-- **Checkpoint selection:** loss rank and listener rank do not agree (§7.4), so the shipped checkpoint was chosen by
-  listening, with the ASR and loss numbers reported alongside rather than used to override the ear.
+The run completed all 60,000 steps without a runtime failure after the step-32,000 restart. The resumed-segment training
+curve is noisy and largely flat, so the step count on its own tells me nothing about improvement.
+
+The generalisation gap is where the diagnosis comes from. Training mel L1 settles near **0.62** while validation mel L1
+stays near **1.05**; validation pitch MSE is **0.68** and energy MSE **1.15** against the 1.0 "always predict the mean"
+baseline. A model that reproduces its own training mel to 0.62 and only reaches 1.05 on held-out text is overfitting,
+not underfitting.
+
+Where validation bottoms out is the one number in this section I cannot report cleanly. The pre-restart validation
+records put the minimum near step 7,000, after which validation rose to 4.0910 at step 60,000 while training loss kept
+falling, but two processes wrote those log files, so I do not trust the step. The direction agrees with the overfitting
+above; the exact step does not survive scrutiny.
+
+Because the three rankings in §7.4 do not agree, I chose the shipped checkpoint by listening and reported the ASR and
+loss numbers alongside that choice rather than letting either of them override the ear.
 
 ### 7.4 Four checkpoints, measured the same way
 
-Every retained checkpoint was decoded on CPU through the shipping HiFi-GAN vocoder, on the same five sentences, with
-the phoneme sequences taken from the saved inference payloads. "Pitch std" and "energy std" are the standard deviation
-of the predicted *normalised* values; the ground truth for a correctly modelled speaker is 1.00, so a value near 0.3
-means the predictor is producing a near-constant contour.
+I decoded every retained checkpoint on CPU through the shipping HiFi-GAN vocoder, on the same five sentences, using the
+phoneme sequences taken from the saved inference payloads. "Pitch std" and "energy std" are the standard deviations of
+the predicted *normalised* values; the ground truth for a correctly modelled speaker is 1.00, so a value near 0.3 means
+the predictor is producing a near-constant contour.
 
 | Checkpoint | Validation total loss | ASR WER † | Pitch std | Energy std | Mean frames | Listener |
 |---|---|---|---|---|---|---|
@@ -268,28 +271,27 @@ word is an error.
 ‡ The pre-restart loss logs are contaminated by overlapping processes, so no loss value can be attached to checkpoints
 5,000 and 10,000.
 
-The three rankings disagree, and the disagreement is the finding:
+The three rankings disagree with each other, and the disagreement is itself the finding. Validation loss would pick
+35,000. ASR WER would pick 5,000, but at WER around 1.0 the metric saturates, so 1.04 against 1.15 is the ordering of two
+failures measured on four sentences rather than a quality difference. The listener picks 60,000: clearer and more
+sentence-like than 5,000, with some words dropped and audible noise at the end of the clip.
 
-- **Validation loss** would pick 35,000.
-- **ASR WER** would pick 5,000 — but at WER ≈ 1.0 the metric saturates, so 1.04 versus 1.15 is the ordering of two
-  failures, measured on four sentences, not a quality difference.
-- **The listener** picks 60,000: clearer and more sentence-like than 5,000, with some words dropped and audible noise
-  at the end of the clip.
+Neither loss nor ASR is a usable proxy for perceptual quality in this regime, and with five sentences and one listener I
+would have you read the subjective ranking as an engineering judgment rather than a statistically established result. The
+shipped audio uses **checkpoint 60,000**, because the deliverable is judged by listening and because 5,000 sounds
+materially worse despite its marginally better WER.
 
-Neither loss nor ASR is a usable proxy for perceptual quality in this regime, and with five sentences and one listener
-the subjective ranking should be read as an engineering judgment, not a statistically established result. The shipped
-audio uses **60,000**, because the deliverable is judged by listening and because 5,000 sounds materially worse despite
-its marginally better WER.
+## 8. Test-sentence observations: English measured and heard, Telugu waiting on training
 
-## 8. Test-sentence observations — text side measured, listening side **PENDING**
-
-The sentences come from `docs/test_sentences.json`, field `final`, unmodified. Five per language: E1, E2a, E2b, E3, E4
-and T1, T2a, T2b, T3, T4. The listening-based part of this section (pronunciation, overall quality) is pending; the
-text-processing part is measured and reproduced below.
+I took all ten sentences from `docs/test_sentences.json`, field `final`, unmodified: E1, E2a, E2b, E3, E4 and T1, T2a,
+T2b, T3, T4. The text-processing side is measured for both languages below. The English listening side is recorded in
+§8.2 and in the checkpoint table of §7.4. The Telugu listening side is not written yet, because the Telugu run had not
+finished while this section was being drafted.
 
 ### 8.0 The ten strings the models receive
 
-Stored in `docs/test_sentences.json` under `final` and used unchanged by `inference.py`. Each line below was written by a script that read the JSON, not re-typed from the PDF, so the Telugu column is byte-identical to the text the model receives.
+A script read these ten lines out of `docs/test_sentences.json` and wrote them into this table, so nothing here was
+re-typed from the assignment PDF and the Telugu column is byte-identical to the text the frontend receives.
 
 | ID | Sentence |
 |---|---|
@@ -304,12 +306,12 @@ Stored in `docs/test_sentences.json` under `final` and used unchanged by `infere
 | T3 | పులి అడవిలో నిశ్శబ్దంగా నడిచింది. |
 | T4 | ఈ సమావేశం 2026 నవంబర్ 12వ తేదీ ఉదయం 10:45 గంటలకు ప్రారంభమవుతుంది, సమయానికి సిద్ధంగా ఉంచండి. |
 
-> **Font requirement (measured).** The Telugu rows need a Telugu-capable font. This PDF was built on the
-> author's Windows machine, where `Nirmala.ttc` supplies the glyphs: the rendered page shows all five Telugu
-> sentences correctly and the check in `scripts/render_report_pdf.py` counted 223 of the 220 Telugu codepoints
-> in the Markdown inside the PDF, with no replacement characters. The same build on a Linux box with no Indic
-> font — including the Kaggle image — renders those rows as blanks, so either build the report locally or pass
-> `--telugu-font <path>` to embed one.
+> **Font requirement (measured).** The Telugu rows need a Telugu-capable font. I built this PDF on my Windows machine,
+> where `Nirmala.ttc` supplies the glyphs, and the rendered page shows all five Telugu sentences correctly. The check in
+> `scripts/render_report_pdf.py` compares the Telugu code points in the Markdown against the text extracted back out of
+> the PDF and fails below 90 % coverage; this build reports no problems and counts 220 Telugu code points. The same build
+> on a Linux box with no Indic font, the Kaggle image included, renders those rows as blanks, so either build the report
+> locally or pass `--telugu-font <path>` to embed one.
 
 ### 8.1 What the frontends actually produce (measured)
 
@@ -326,13 +328,14 @@ Stored in `docs/test_sentences.json` under `final` and used unchanged by `infere
 | T3 | 33 | unchanged |
 | T4 | 91 | **unchanged, including the digits**: `… 2026 … 12వ … 10:45 …` |
 
-All ten encode without an unknown-character error, which is the precondition for inference.
+All ten strings encode without an unknown-character error, which is the precondition for inference; the table records
+what each frontend produced rather than what I expected it to produce.
 
 ### 8.2 The English failure, isolated by controls
 
-The first listener pass reported that all five sentences sounded wrong. Rather than infer a cause, five properties of
-the pipeline were tested independently on the same checkpoints. Each test was chosen so that a plausible explanation
-would produce a specific, visible result.
+The first listener pass reported that all five English sentences sounded wrong. Rather than argue about the cause, I
+tested five properties of the pipeline independently on the same checkpoints, and chose each test so that a plausible
+explanation would produce a specific, visible result.
 
 | Test | Method | Result | Explanation it rules out |
 |---|---|---|---|
@@ -343,36 +346,36 @@ would produce a specific, visible result.
 | Intelligibility | Transcribe all twenty clips with `facebook/wav2vec2-base-960h`, after validating the same stack on real speech | WER 1.04–1.27 (see §7.4); control on LibriSpeech **0.000 / 0.000 / 0.031** | The waveform being structurally sound but the probe being at fault |
 
 Three further observations point the same way. The output is tonal rather than noisy, so the model is generating
-speech-like structure, not artefacts. The predicted mel marginals are normal (median ≈ −5.5, 99th percentile ≈ −0.5),
-so the model is not emitting out-of-distribution values. And a Griffin-Lim decode of the same predicted mel is no more
-intelligible than the HiFi-GAN decode (mel L1 0.700–0.740), which means the content is already wrong before the vocoder
-sees it.
+speech-like structure, not artefacts. The predicted mel marginals are normal (median about −5.5, 99th percentile about
+−0.5), so it is not emitting out-of-distribution values either. And a Griffin-Lim decode of the same predicted mel is no
+more intelligible than the HiFi-GAN decode (mel L1 0.700 to 0.740), which means the content is already wrong before the
+vocoder sees it.
 
-**Conclusion.** The pipeline is correct at every stage that can be checked in isolation, and the model output is
-speech-shaped but wrong. That is a generalisation failure: 4.842 h of two-speaker, ASR-oriented read/spontaneous
-English is not enough for a 35-million-parameter model to learn pronunciation it has not seen, and training loss
-(1.2577) sits far below validation loss (4.0910). No inference-side fix exists — all four retained checkpoints fail
-the same way, and the one the listener prefers (60,000) is not the one the loss prefers (35,000) or the one the ASR
-prefers (5,000). Fixing it requires changing the data or the training design, both of which are outside the remaining
-GPU budget, so it is reported here as a diagnosed negative result rather than presented as working speech.
+So: the pipeline is correct at every stage I can check in isolation, and the model output is speech-shaped but wrong.
+That is a generalisation failure. 4.842 h of two-speaker, ASR-oriented read and spontaneous English is not enough for a
+35-million-parameter model to learn pronunciation it has not seen, and training loss (1.2577) sits far below validation
+loss (4.0910). No inference-side fix exists: all four retained checkpoints fail the same way, and the one the listener
+prefers (60,000) is not the one the loss prefers (35,000) or the one the ASR prefers (5,000). Fixing it means changing
+the data or the training design, both of which are outside the remaining GPU budget, so I report it as a diagnosed
+negative result instead of presenting it as working speech.
 
 Two caveats bound that conclusion. The ASR is a LibriSpeech acoustic model, so Indian-accented and synthetic speech is
-out of its domain; WER 1.0 should be read as "not recoverable" rather than as a precise word error rate. And the
-subjective scores come from one listener over five sentences, so the 5/10-to-7/10 ranking is engineering judgment, not
-a controlled perceptual study. Neither caveat weakens the diagnosis, because the control battery does not depend on
-either: the vocoder, the durations and the conditioning were all measured directly.
+out of its domain; I read WER 1.0 as "not recoverable" rather than as a precise word error rate. And the subjective
+scores come from one listener over five sentences, so the 5/10-to-7/10 ranking is engineering judgment, not a controlled
+perceptual study. Neither caveat weakens the diagnosis, because the control battery does not depend on either: I measured
+the vocoder, the durations and the text conditioning directly.
 
-Frontend caveats:
+Two frontend notes belong with these results.
 
-- **E4 is normalised correctly.** `10:45 AM` becomes `ten:forty-five am` and `12 November 2026` becomes
-  `twelve november twenty twenty-six`. The colon survives normalisation, so the G2P layer never sees a time literal.
-  `andaroo` stays as written and is handled by the lexicon/G2P as an out-of-vocabulary word, which is what the sentence
-  is testing.
-- **T4 is not normalised.** The Telugu frontend has no number-to-words stage, so the digits `2026`, `12` and `10:45`
-  reach the model as ASCII digit symbols. Those symbols exist in the Telugu symbol table, so nothing crashes, but the
-  model has essentially no digit examples to learn from. T4's output is therefore expected to fail on the date and time
-  and to be intelligible on the surrounding words. This is a frontend gap, not a training failure, and it is reported
-  as such rather than hidden.
+E4 is normalised correctly. `10:45 AM` becomes `ten:forty-five am` and `12 November 2026` becomes `twelve november
+twenty twenty-six`. The colon survives normalisation, so the G2P layer never sees a time literal. `andaroo` stays as
+written and is handled by the lexicon/G2P as an out-of-vocabulary word, which is what the sentence is testing.
+
+T4 is not normalised. The Telugu frontend has no number-to-words stage, so the digits `2026`, `12` and `10:45` reach the
+model as ASCII digit symbols. Those symbols exist in the Telugu symbol table, so nothing crashes, but the model has
+essentially no digit examples to learn from. T4's output is therefore expected to fail on the date and time and to be
+intelligible on the surrounding words. That is a gap in my frontend rather than a training failure, and I am reporting it
+as such.
 
 Why each sentence is interesting:
 

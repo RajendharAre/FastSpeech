@@ -16,8 +16,18 @@ measurement, and the cause is memorisation over 213 epochs of 4.84 h of audio
 listening, at 7/10 against 5/10 for step 5,000.
 
 Telugu training started on 2026-11-06 on T4 x2 and is running to the same
-60,000-step budget at about 0.34 s/step, roughly six hours. Its data is 3,269
-clips and 4.700 h after alignment and feature extraction.
+60,000-step budget. At step 15,039 the measured mean is 0.362 s/step with no
+sign of the rate degradation the English run showed, which puts the finish near
+12:25 UTC. Its data is 3,269 clips and 4.700 h after alignment and feature
+extraction. Validation has plateaued early: mel is flat at 0.929 to 0.931 since
+step 2,000, and pitch has never dropped below the 1.0 predict-the-mean baseline
+in sixteen validations, so the Telugu pitch adaptor is currently behind the
+English one rather than ahead of it. The first learning-rate anneal at step
+20,000 has not fired yet, so the plateau is not final.
+
+The report is being rewritten in my own voice, sections 1 to 6 done and 7 to 11
+to follow. No measurement changes in that pass except where a fresher one
+exists.
 
 Still outstanding: Telugu inference and its variance-adaptor plots, report
 sections 9 and 10, and re-running `scripts/check_no_overlap.py` against the
@@ -30,6 +40,10 @@ final Kaggle manifests.
 - `Report/Technical_Report.md`, `Report/Technical_Report.pdf` (root) — Sections 1 to 3 rewritten in the author's voice: first person for decisions, passive for measurements, the bold-lead bullet lists in section 3 turned into paragraphs, and "this assignment" constructions removed. No number, path, table cell or claim was changed.
   Why: The prose read as machine-written, and the request was that every sentence read as the author's own writing.
   Verified: Every figure and file path cross-checked against the previous version; `python scripts/render_report_pdf.py --check` reports no problems, 220 Telugu code points drawn and all Latin sentences present.
+
+- `Report/Technical_Report.md`, `Report/Technical_Report.pdf` (root) — Sections 4 to 6 rewritten in the same voice as sections 1 to 3: the dataset and configuration choices are stated as my decisions, the counts and rates stay impersonal, and the `Drops:` shorthand lines became sentences that add up. Two cells corrected while I was in there: the `Batch size x grad-accum 16 x 1` row now names all three settings, because `grad_acc_step` really is 1 in both configs and the 4 that bundles the loader is `group_size`, not accumulation; and the Telugu step-time and wall-clock rows now carry the measured 0.362 s/step at step 15,039 instead of the 220-step launch estimate. The section 6 ceiling paragraph gains the Telugu 5.8 GiB reading, with its confound stated rather than presented as proof.
+  Why: The same request as sections 1 to 3, and the batch row was actively misleading: `16 x 1` reads as no gradient accumulation, while the loader in fact pulls 64 clips per iteration and the epoch bar therefore counts a quarter of the trainer's steps.
+  Verified: Both `config.yaml` files re-read for `batch_size 16`, `group_size 4`, `grad_acc_step 1`, Telugu `save_step 5000`; `English/train.py` lines 82-87 and 137-157 confirm the loader batches `batch_size * group_size` and steps per micro-batch. Every figure from the old sections 4 to 6 checked present in the new text by script (49 tokens, none missing). `python scripts/render_report_pdf.py --check` reports no problems, 220 Telugu code points drawn, PDF 789,236 bytes.
 
 - `CHANGES.md` (root) — The six-column table became dated sections with one bullet per change, and the status list became a current summary.
   Why: 139 rows of six columns with very long cells rendered as a wall of text that nobody could read through. The status list had also drifted: one bullet said checkpoint 35,000 was selected, a later one said 60,000 shipped, and one pointed at `docs/AI_HANDOFF.md`, which is no longer tracked.

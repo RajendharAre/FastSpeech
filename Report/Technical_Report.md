@@ -97,11 +97,11 @@ reach the model exactly as written; §8.1 measures that, and §9 reports it as a
 
 ### English — Svarah (`ai4bharat/Svarah`)
 
-AI4Bharat's Indian-accented English read/spontaneous benchmark, built for ASR rather than TTS. Two speakers were
-exported (one female, one male): 3,276 + 2,827 = 6,103 clip/transcript pairs. The manifests that entered preprocessing
-hold 5,582 clips, 6.078 h of audio before alignment (train 5.132 h, val 0.946 h). Two speakers is a deliberate
-compromise: Svarah averages only a few minutes per speaker across ~117 speakers, so a single-speaker model is
-impossible and the reference speaker embedding is used instead.
+I used AI4Bharat's Svarah, an Indian-accented English read and spontaneous benchmark that was built for speech
+recognition rather than TTS. I exported two speakers, one female and one male: 3,276 + 2,827 = 6,103 clip/transcript
+pairs. The manifests that entered preprocessing hold 5,582 clips and 6.078 h of audio before alignment (5.132 h train,
+0.946 h validation). Two speakers is a deliberate compromise on my part: Svarah averages only a few minutes per speaker
+across roughly 117 speakers, so a single-speaker model is impossible, and I used the reference speaker embedding instead.
 
 | Stage | Clips | Audio |
 |---|---|---|
@@ -109,18 +109,20 @@ impossible and the reference speaker embedding is used instead.
 | Entered the manifests | 5,582 | 6.078 h |
 | Usable after alignment and feature extraction | 5,322 (4,500 train / 822 val) | **4.842 h** |
 
-Drops: 260 in total — alignment 164 (non-positive phone duration), missing TextGrid 71, pitch extraction 20 (no voiced
-frames), feature statistics 4, transcript 1. The gap between 6.078 h of manifest audio and 4.842 h of usable audio is
-audio outside the phone tier plus the dropped clips; 4.842 h is the honest training figure.
+Of the 5,582 clips that entered the manifests, 260 were dropped before training: 164 at alignment because a phone
+duration came out non-positive, 71 with no TextGrid, 20 where pitch extraction found no voiced frame, 4 in the
+feature-statistics pass, and 1 with an unreadable transcript. The gap between 6.078 h of manifest audio and 4.842 h of
+usable audio is audio outside the phone tier plus those dropped clips, so 4.842 h is the honest training figure rather
+than 6.078 h.
 
 ### Telugu — IndicTTS Telugu (`SPRINGLab/IndicTTS_Telugu`)
 
-A Hugging Face copy of the IIT Madras IndicTTS data: 8,576 clips, 36.71 h, two speakers (male 12.79 h / 4,533 clips;
-female 23.92 h / 4,043 clips). The **male speaker only** was used, so the model sees one voice and a single speaker
-embedding; a single speaker gives the cleanest comparison against the two-speaker English model, and the male subset is
-the smaller and easier-to-balance one. Subsampling keeps clips inside the duration window implied by the 11.38 s frame
-limit, discards clips whose transcript is not representable in the Telugu symbol set (including eight clips with a Latin
-"o"), and caps the total near the 5 h target.
+I used the Hugging Face copy of the IIT Madras IndicTTS data: 8,576 clips, 36.71 h, two speakers (male 12.79 h across
+4,533 clips; female 23.92 h across 4,043 clips). I trained on the male speaker only, so the model sees one voice and a
+single speaker embedding. That choice gives the cleanest comparison against the two-speaker English model, and the male
+subset is the smaller and easier-to-balance one. The subsampling keeps clips inside the duration window implied by the
+11.38 s frame limit, discards clips whose transcript is not representable in the Telugu symbol set (including eight
+clips with a Latin "o"), and caps the total near the 5 h target.
 
 | Stage | Clips | Audio |
 |---|---|---|
@@ -128,7 +130,7 @@ limit, discards clips whose transcript is not representable in the Telugu symbol
 | Entered the manifests | 3,363 | — |
 | Usable after alignment and feature extraction | 3,269 (2,751 train / 518 val) | **4.700 h** |
 
-Drops: 94 — alignment 83, missing TextGrid 3, missing audio 8.
+Ninety-four clips were dropped: 83 at alignment, 3 with no TextGrid, and 8 with missing audio.
 
 > **Known limitation, stated explicitly.** The Telugu audio in this run is **16 kHz upsampled to 22,050 Hz**
 > (`resample_poly`, 441/320, PCM 16-bit). The 22.05 kHz export was lost when the Kaggle session working directory was
@@ -137,6 +139,9 @@ Drops: 94 — alignment 83, missing TextGrid 3, missing audio 8.
 > receives a 22.05 kHz sampling rate and therefore produces energy above 8 kHz that the acoustic model did not predict.
 
 ## 5. Preprocessing and alignment
+
+Both language folders share one preprocessing pipeline; what differs is the aligner recipe and which TextGrid tier
+supplies the durations. The table records what I actually ran.
 
 | Step | English | Telugu |
 |---|---|---|
@@ -149,18 +154,22 @@ Drops: 94 — alignment 83, missing TextGrid 3, missing audio 8.
 | Normalisation | training-set mean/σ from `stats.json` | same |
 | Output layout | flat: `mel/<speaker>-mel-<clip>.npy`, same for `pitch`, `energy`, `duration` | same |
 
-English `stats.json`: pitch `mean 177.64, std 56.06, min -2.0096, max 9.0707`; energy `mean 27.01, std 26.67,
-min -1.0123, max 8.1121` (both in normalised units).
+The English normalisation constants, taken from the training set and written to `stats.json`: pitch `mean 177.64,
+std 56.06, min -2.0096, max 9.0707`; energy `mean 27.01, std 26.67, min -1.0123, max 8.1121`, both already in
+normalised units. Pitch and energy losses in section 7 are measured against these, which is why an MSE near 1.0 means
+the adaptor is predicting the mean rather than the contour.
 
-Splits: fixed seed, clip-level and transcript-level disjointness verified, every validation speaker also present in
-training. Manifests are committed under `English/manifests/` and `Telugu/manifests/`.
+I built both splits from a fixed seed. Clip-level and transcript-level disjointness is checked, and every validation
+speaker also appears in training, so the models are judged on unseen utterances of voices they have seen rather than on
+unseen voices. The manifests that record the selections are committed under `English/manifests/` and
+`Telugu/manifests/`.
 
 ## 6. Training configuration
 
 | Setting | English | Telugu |
 |---|---|---|
 | Steps | 60,000 | 60,000 |
-| Batch size × grad-accum | 16 × 1 | 16 × 1 |
+| Batch size | 16 clips per step (`grad_acc_step` 1, `group_size` 4, so the loader pulls 64 clips per iteration) | same |
 | Steps per epoch | 281 (4,500 clips) | 172 (2,751 clips) |
 | Optimiser | Adam, β 0.9/0.98, ε 1e-9, weight decay 0 | same |
 | Learning rate | Noam schedule on `256^-0.5`: peak ≈ 9.9e-4 at step 4,000, ×0.3 at 20k/26k/33k, ≈ 6.9e-6 at 60k | same schedule and anneal points, so the two runs are comparable |
@@ -169,28 +178,32 @@ training. Manifests are committed under `English/manifests/` and `Telugu/manifes
 | Validation / synthesis | every 1,000 steps | every 1,000 steps |
 | Checkpoints | every 2,500 steps (5,000 for the first 30,000 steps) | every 5,000 steps |
 | Hardware | Kaggle GPU T4 x2, PyTorch 2.11.0+cu130, `nn.DataParallel` (batch 16 = 8+8) | Kaggle GPU T4 x2, `nn.DataParallel` (8+8) |
-| Measured step time | **0.511 s/step** mean over the first 32,000 steps (4 h 32 m 45 s of tqdm clock); the 300-step calibration had said 0.304 s/step | **0.341 s/step** over the first 220 steps (75 s of clock, 3.4 it/s average) |
-| Wall clock | ≈ 8.5 h for 60,000 steps at the measured mean, not the 5.3 h the calibration implied | ≈ 5.7 h for 60,000 steps at the measured rate |
-| Budget rationale | 60,000 steps ≈ 213 epochs; the reference 900,000 steps is unattainable and would leave the learning rate flat, so the anneal points were scaled to keep the reference fractions (33/43/55 %) | same logic; 60,000 steps ≈ 349 epochs of a smaller split |
+| Measured step time | **0.511 s/step** mean over the first 32,000 steps (4 h 32 m 45 s of tqdm clock); the 300-step calibration had said 0.304 s/step | **0.362 s/step** at step 15,039 (1 h 30 m 58 s of tqdm clock); the 220-step launch estimate had said 0.341 s/step |
+| Wall clock | ≈ 8.5 h for 60,000 steps at the measured mean, not the 5.3 h the calibration implied | ≈ 6.1 h at the measured mean so far, against the 5.7 h the launch estimate implied |
+| Budget rationale | 60,000 steps ≈ 213 epochs; the reference 900,000 steps is unattainable and would leave the learning rate flat, so I scaled the anneal points to keep the reference fractions (33/43/55 %) | same logic; 60,000 steps ≈ 349 epochs of a smaller split |
 
 **Run interruption at step 32,000.** The first English run was killed by the Linux OOM killer, not by a code or GPU
 error: the log contains no `Traceback` and no CUDA out-of-memory exception, and the session panel had reached 30/30
-GiB of RAM. The step rate also degraded as it went — the last 2,000 steps ran at ~0.65 s/step against ~0.30 s/step at
-the start — which is the same memory growth showing up as time. Checkpoints up to `30000.pth.tar` were on disk and
-survived, so the run resumes from 30,000 rather than restarting. Two changes were made before resuming, neither of
-them to the model, the data or the schedule: `train.step.save_step` was cut to 2,500 so a future kill costs ~21
-minutes instead of ~45, and `utils/tools.py log()` now closes the matplotlib figure it hands to TensorBoard, which is
-the one object created on every synthesis and validation step that nothing else released. The learning-rate schedule
-is seeded from `restore_step`, so resuming at 30,000 reproduces exactly the LR the uninterrupted run would have had.
+GiB of RAM. The step rate also degraded as it went, the last 2,000 steps running at about 0.65 s/step against about
+0.30 s/step at the start, which is the same memory growth showing up as time. Checkpoints up to `30000.pth.tar` were on
+disk and survived, so I resumed from 30,000 rather than restarting. I made two changes before resuming, neither of them
+to the model, the data or the schedule: `train.step.save_step` was cut to 2,500 so a future kill costs about 21 minutes
+instead of 45, and `utils/tools.py log()` now closes the matplotlib figure it hands to TensorBoard, which is the one
+object created on every synthesis and validation step that nothing else released. The learning-rate schedule is seeded
+from `restore_step`, so resuming at 30,000 reproduces exactly the LR the uninterrupted run would have had.
 
 **Two hard resource ceilings on the training host.** The Kaggle session has **30 GiB of RAM** and a **20 GiB working
 volume**, and the English run reached both: the OOM killer ended it at step 32,000, and checkpoints at 2,500-step
-spacing would have filled the volume (24 saves × 418 MB ≈ 10 GB of a ~20 GB disk that also holds 2 GB of features and
-audio). The Telugu run was configured against those ceilings before it started, not after it failed: `save_step` was
-raised from 2,500 to 5,000, which fits twelve saves in the 8 GiB that were free on the volume and still caps the loss
-from a crash at roughly 42 minutes; the pre-launch check measures free disk and refuses to start below 5 GiB; and
-every checkpoint is written to a temporary file and moved into place atomically, so an interrupted save leaves a
-`.tmp` rather than a corrupt `.pth.tar`.
+spacing would have filled the volume (24 saves × 418 MB ≈ 10 GB of a roughly 20 GB disk that also holds 2 GB of features
+and audio). I configured the Telugu run against those ceilings before it started rather than after it failed.
+`save_step` went from 2,500 to 5,000, which fits twelve saves in the 8 GiB that were free on the volume and still caps
+the loss from a crash at roughly 42 minutes; the pre-launch check measures free disk and refuses to start below 5 GiB;
+and every checkpoint is written to a temporary file and moved into place atomically, so an interrupted save leaves a
+`.tmp` rather than a corrupt `.pth.tar`. The Telugu run uses 5.8 GiB of the 31.3 GiB visible to the session at step
+15,039, with one `train.py` process on disk. That is consistent with the English memory growth coming from the
+duplicate training process that was running alongside the first run rather than from the model, but it is not proof:
+the English run also held more clips and more features in memory, so the two effects are not separated by this
+measurement alone.
 
 ## 7. Loss analysis and checkpoint comparison
 

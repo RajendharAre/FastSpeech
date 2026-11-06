@@ -59,10 +59,11 @@ English/                 self-contained English model
   text/acronyms.csv      acronym -> spoken form table (letters or word mode)
   tests/                 smoke test, config/frontend/manifest/audio/variance-export unit tests
 Telugu/                  same layout, Telugu-specific config and frontend
-tests/                   root pytest tests (alignment QC) and conftest.py
 scripts/                 split_dataset.py, check_no_overlap.py,
                          validate_alignments.py, build_g2p_names.py,
-                         plot_training_losses.py
+                         plot_training_losses.py, export_svarah.py,
+                         export_male.py
+conftest.py              puts the repository root on sys.path for pytest
 Results/English|Telugu/  loss plots, generated audio, variance-adaptor plots (Phase 5-6)
 Report/                  Technical_Report.md and the built Technical_Report.pdf
 docs/                    assignment notes, dataset report, test sentences
@@ -165,8 +166,8 @@ Repeat with the `Telugu/...` output paths. The splitter is deterministic for a
 given `--seed` (default 1234), groups identical normalized transcripts, and
 keeps at least one training clip for every validation speaker.
 
-Dataset export is done by `docs/export_svarah.py` (English) and
-`docs/export_male.py` (Telugu), both run on Kaggle: they write `<clip>.wav` at
+Dataset export is done by `scripts/export_svarah.py` (English) and
+`scripts/export_male.py` (Telugu), both run on Kaggle: they write `<clip>.wav` at
 22,050 Hz plus the `<clip>.lab` transcript, and a separate 16 kHz corpus for the
 aligner, with a per-clip status CSV (`preprocessing_log.csv` style) so a rerun
 can be reconciled clip by clip. The Telugu `.lab` must contain the **alignment**
@@ -338,7 +339,6 @@ no Indic font installed.
 python -m unittest discover -s tests -p "test_*.py" -v
 # from the repository root
 python -m unittest discover -s scripts/tests -v
-python -m pytest tests/test_validate_alignments.py -q
 python -m pytest kaggle/tests -q
 ```
 
@@ -352,18 +352,18 @@ Latest local run (2026-11-05, Windows, Python 3.14):
 
 | Invocation | Result |
 |---|---|
-| `pytest English/tests` | 90 passed, 1 skipped |
-| `pytest Telugu/tests tests` | 98 passed, 2 skipped |
-| `pytest kaggle/tests scripts/tests` | 67 passed |
+| `pytest English/tests` | 92 passed, 1 skipped |
+| `pytest Telugu/tests` | 96 passed, 2 skipped |
+| `pytest kaggle/tests scripts/tests` | 73 passed |
 
 The skips are `test_preprocessing_drops.py:47` in both languages (the preprocessing
 stack — `pyworld`, `tgt` — is not installed in the local Windows environment, so that
 path is only exercised on Kaggle) and `Telugu/tests/test_config_validation.py:205`
 (an English-only rule).
 
-`tests/conftest.py` puts the repository root on `sys.path`, so the root pytest
-tests import `scripts.*` whether pytest is run as a module or as a console
-script.
+`conftest.py` at the repository root puts the root on `sys.path`, so the
+`scripts/tests` suite imports `scripts.*` whether pytest is run as a module or
+as a console script.
 
 The audio/STFT tests are skipped when librosa is not installed. With the pinned
 `librosa==0.10.2.post1` they cover the librosa filter-bank match, inverse
@@ -376,7 +376,7 @@ counts. `English/tests/test_normalise.py` covers each normalisation rule and the
 acronym table; `test_lexicon_merge.py` covers the supplementary dictionary.
 `scripts/tests/test_manifest_normalisation.py` and `test_build_g2p_names.py`
 cover provenance columns and the G2P builder, and
-`tests/test_validate_alignments.py` runs the alignment QC on synthetic TextGrids
+`scripts/tests/test_validate_alignments.py` runs the alignment QC on synthetic TextGrids
 with CRLF line endings. `test_max_seq_len.py` (each language) pins what happens
 when a mel batch exceeds `model.max_seq_len`: training silently truncates to
 1000 frames, eval and inference do not truncate. `test_too_long.py` (each

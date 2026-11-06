@@ -2,7 +2,7 @@
 
 Run on Kaggle (never locally; there is no Svarah data on the laptop):
 
-    python docs/export_svarah.py
+    python scripts/export_svarah.py
 
 Writes four things:
 

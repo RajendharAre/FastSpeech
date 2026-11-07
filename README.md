@@ -416,14 +416,14 @@ shipped weights are hosted externally and linked here.
 
 | Language | Shipped step | Parameters | Download |
 |---|---|---|---|
-| English | 60,000 | 35,159,617 | pending |
-| Telugu | 60,000 | 35,099,201 | pending |
+| English | 60,000 | 35,159,617 | [Download checkpoint](https://drive.google.com/file/d/1JSXN7jV-aT9zfuqd5T9ZnVsaMg9u4gDu/view?usp=drive_link) |
+| Telugu | 60,000 | 35,099,201 | [Download checkpoint](https://drive.google.com/file/d/1oWwu6tj8OJB1LzTbzqOeZ2X-xfOOQmmK/view?usp=drive_link) |
 
 `English/checkpoints/README.md` and `Telugu/checkpoints/README.md` record the
 selection rationale, the payload format, the resume command and the config
-checksum for each. The link must remain accessible during evaluation, so open it
-in a signed-out browser window and confirm it downloads the file before
-submitting.
+checksum for each. The links open the Google Drive file previews; use Drive's
+Download button to save each checkpoint. Both files are shared as Anyone with
+the link / Viewer.
 
 ## Vocoder
 

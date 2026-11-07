@@ -17,7 +17,7 @@ linked below.
 | Parameters | 35,099,201 |
 | Validation total loss | 3.791061 |
 | Selected by | listening: a slight preference for 60,000 over 5,000 |
-| Download link | pending |
+| Download link | [Google Drive](https://drive.google.com/file/d/1oWwu6tj8OJB1LzTbzqOeZ2X-xfOOQmmK/view?usp=drive_link) |
 
 I chose 60,000 by ear rather than by loss. Among saved checkpoints, step 5,000
 had the lowest validation loss, 3.73799, and the overall validation minimum was
@@ -69,8 +69,6 @@ the run itself was launched from the Kaggle working copy.
 
 ## When the upload is done
 
-Replace `pending` in the table above with the public URL, add the same URL to the
-root `README.md`, and open it in a signed-out browser window to confirm it
-downloads without a login. Google Drive interposes a virus-scan page on files
-this size, so check that the link actually yields the file rather than only a
-preview.
+The link opens the shared Google Drive file preview. Use its Download button to
+save `telugu_60000.pth.tar`; the file is shared as Anyone with the link /
+Viewer.

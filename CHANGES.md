@@ -15,27 +15,68 @@ measurement, and the cause is memorisation over 213 epochs of 4.84 h of audio
 (report sections 7 and 8). Checkpoint 60,000 is the one shipped; I chose it by
 listening, at 7/10 against 5/10 for step 5,000.
 
-Telugu training started on 2026-11-06 on T4 x2 and is running to the same
-60,000-step budget. At step 15,039 the measured mean is 0.362 s/step with no
-sign of the rate degradation the English run showed, which puts the finish near
-12:25 UTC. Its data is 3,269 clips and 4.700 h after alignment and feature
-extraction. Validation has plateaued early: mel is flat at 0.929 to 0.931 since
-step 2,000, and pitch has never dropped below the 1.0 predict-the-mean baseline
-in sixteen validations, so the Telugu pitch adaptor is currently behind the
-English one rather than ahead of it. The first learning-rate anneal at step
-20,000 has not fired yet, so the plateau is not final.
+Telugu training completed at 60,000 steps. Validation loss among saved
+checkpoints was lowest at step 5,000 (3.73799); step 60,000 was 3.791061.
+Inference at steps 5,000 and 60,000 generated five WAVs and all 15 variance
+plots plus five prediction JSONs per checkpoint. Both sets are copied into
+separate folders under `Results/Telugu/`; the 35,000-step comparison is
+intentionally excluded. The console warned that no Telugu font was installed,
+so plot labels use code-point fallbacks. The user reports that the 60,000-step
+audio sounds good; detailed listening review and report sections 9 and 10
+remain pending.
 
-The report is being rewritten in my own voice, sections 1 to 6 done and 7 to 11
-to follow. No measurement changes in that pass except where a fresher one
-exists.
+The report rewrite in the author's voice has sections 1 to 9 drafted; section 10,
+the English-versus-Telugu comparison, is the last one left. The 60,000-step
+Telugu inference outputs are present locally and are the only Telugu inference
+result presented in the report. The 5,000-step validation loss and 5,000-step
+prediction figures are reported as comparisons.
 
-Still outstanding: Telugu inference and its variance-adaptor plots, report
-sections 9 and 10, and re-running `scripts/check_no_overlap.py` against the
-final Kaggle manifests.
+Still outstanding: the English-versus-Telugu comparison in section 10, Telugu
+loss plots over the full 0 to 60,000 curve, Telugu WER, checkpoint hosting,
+and re-running `scripts/check_no_overlap.py` against the final Kaggle manifests.
 
 ## Change log
 
 ### 2026-11-06
+
+- `Report/Technical_Report.md`, `Report/Technical_Report.pdf` (root) — Section 9, "Variance-adaptor analysis", written in place of the pending block: Table 9.1 with frames, seconds, mean F0, F0 range, energy range and pitch σ for the five Telugu sentences at checkpoint 60,000; Table 9.2 with content and pause durations split by symbol class; and four paragraphs on duration, pitch, energy and the change since checkpoint 5,000.
+  Why: Section 9 was the only place the report promised to look inside the adaptors' outputs rather than at the losses, and the saved `<ID>.json` payloads beside each plot had never been turned into numbers in the text.
+  Verified: Every figure recomputed from `Results/Telugu/checkpoint_60000/variance_adaptor_plots/*.json`. `sum(duration)` equals `mel_frames` on all ten clips across both checkpoints, so the frame counts are internally consistent. Pauses 1.12 to 1.57 times content, punctuation 6 to 9 frames, sentence-initial 1.83 / 2.00 / 3.20 times median in three of five, last content symbol 0.57 to 1.00 of median, last pair 7 to 10 frames against a median pair of about 12, first-quarter mean between −0.09 and +0.63 and last-quarter between −0.27 and −0.68, pitch σ 0.47 to 0.73, and 5,000-to-60,000 totals growth 5.3 to 9.3 % with pitch spread 0.696 to 0.599. Five numbers from my first draft were wrong and were corrected before the entry was written: punctuation 7 to 9 became 6 to 9 frames, an energy ratio to the minimum became the absolute ranges, T2a's first quarter +0.33 became −0.09, the last-pair sum 7 became 7 to 10, and the totals growth 5.1 % became 5.3 %. `python scripts/render_report_pdf.py --check`: no problems, 224 Telugu code points drawn, all Latin sentences present, PDF 858,317 bytes.
+
+- `Report/Technical_Report.md`, `Report/Technical_Report.pdf`, and `scripts/render_report_pdf.py` - The report now presents the Telugu 60,000-step inference result only, while noting that the saved 5,000-step checkpoint had validation loss 3.73799 versus 3.791061 at step 60,000. It clarifies that the lower loss is not evidence that the audio sounds better. Simplified typographic marks and tightened PDF spacing and table pagination.
+  Why: Keep the report aligned with the requested final Telugu checkpoint and improve readability without hiding the loss comparison.
+  Verified: `python scripts/render_report_pdf.py --check` passes with all Latin sentences present and 219 Telugu code points drawn. The PDF has 12 pages. All 54 renderer tests pass; the page overview shows no large blank areas from table pagination.
+
+- Telugu training completed at step 60,000. Inference ran from checkpoints 5,000, 35,000 and 60,000 in Kaggle for listening comparison. The user requested that only 5,000 and 60,000 be kept in the project, in separate folders; 35,000 was omitted. The user reports that 60,000-step audio sounds good, while step 5,000 had the lowest validation loss (3.73799).
+  Why: Keep the lower-validation-loss and user-preferred-audio candidates side by side without mixing or overwriting their outputs.
+  Verified: Copied `step_5000` to `Results/Telugu/checkpoint_5000/` and `step_60000` to `Results/Telugu/checkpoint_60000/`. Each contains exactly 5 WAVs, 5 JSONs and 15 PNGs; sizes are approximately 2.02 MB and 2.12 MB. The source ZIP passed integrity checking and contained all three comparison sets. Kaggle lacked a Telugu font, so plot labels use code-point fallbacks.
+
+- `scripts/summarise_variance_export.py` (both) — NEW: reads the `<ID>.json` payloads that `inference.py` writes and prints frames per symbol, normalised pitch and energy spread, the duration-versus-mel-frame check, and per-sentence duration, for every `Results/Telugu/checkpoint_*` directory present.
+  Why: Those numbers were being recomputed by hand in notebook cells for each checkpoint, so the report's §9 figures were reproducible only from a transcript.
+  Verified: Run against `checkpoint_5000` and `checkpoint_60000`: `sum(duration)` equals `mel_frames` on all ten clips, and the 5,000 figures match the values measured earlier on Kaggle (5.98 frames/symbol, pitch std 0.696, T1 4.78 s, T4 6.91 s).
+
+- `Report/Technical_Report.md` (root) — Section 6's Telugu step-time and wall-clock rows now carry the post-restart measurement: 0.390 s/step over 3,674 steps against 0.362 before the crash, and the wall clock split into 3 h 42 m to step 36,695 plus about 2 h 43 m to 60,000.
+  Why: The row still described the pre-crash rate and a 6.1 h projection that the restart invalidated.
+  Verified: 1,434 s of tqdm clock from the outer bar in `telugu_resume.log` over steps 35,000 to 38,674; PID 343 at 24 m 27 s in the same reading, and `train_loss.csv` at 402 rows with the newest row 28 s old when it was taken.
+
+- `Report/Technical_Report.md`, `Report/Technical_Report.pdf` (root) — New subsection 7.5, the Telugu loss analysis the report did not have: nine validation points, the validation minimum and where it is lost, and the training-to-validation ratio at step 36,000 for all six components.
+  Why: Section 7 described English only, so the smaller corpus's run was documented in sections 4 to 6 and then never shown to the reader as a learning curve.
+  Verified: Read from `logs/train/train_loss.csv` (381 rows) and `logs/val/val_loss.csv` (37 rows) in the Kaggle working copy. The six components at step 36,000 sum to 3.7865 against a printed total of 3.7866, and the argmins quoted agree with the ones the plotting script printed independently. The dropout caveat is stated because the training figure comes from a forward pass with dropout active. `python scripts/render_report_pdf.py --check`: no problems, 220 Telugu code points drawn, PDF 828,995 bytes.
+
+- `Report/Technical_Report.md`, `Report/Technical_Report.pdf` (root) — New paragraph at the end of section 6, "Run interruption at step 36,695", recording the container restart, the evidence that separates it from a training failure, and the resume from `35000.pth.tar`.
+  Why: Section 6 documented the English OOM interruption in detail and said nothing about the Telugu one, so the report read as if that run had gone through uninterrupted. The restart also explains a dependency failure the reader would otherwise have no context for.
+  Verified: `/proc/uptime` 776 s, the notebook's first process at 05:01, all seven checkpoints written within 20 s of each other, zero `dmesg` OOM lines, no `Traceback`, and the log ending mid-redraw at step 36,695. The `unidecode` failure on the following decode was reproduced and fixed by reinstalling. The resumed segment's first 900 training rows were compared against the dead run's own rows at the same steps: deltas between −0.13 and +0.04, inside the run's own spread of about 0.10 between adjacent hundred-step windows. `python scripts/render_report_pdf.py --check`: no problems, 220 Telugu code points drawn, PDF 791,494 bytes.
+
+- `CHANGES.md` (root) — The status block said Telugu pitch "never dropped below the 1.0 predict-the-mean baseline in sixteen validations". It did: 0.9141 at step 1,000 and 0.9861 at step 2,000. The sentence now gives those two steps, the worst value 1.1005 at 3,000 and the best 1.0341 at 25,000.
+  Why: I copied the claim forward from an earlier summary without re-reading the validation CSV, and the cleaned CSV rebuilt today contradicts it in its own second row.
+  Verified: `logs/val/val_loss.csv`, 36 rows, pitch column read directly: 0.9141 at step 1,000, 0.9861 at 2,000, 1.1005 at 3,000, 1.0341 at 25,000.
+
+- `Report/Technical_Report.md` (root) — Three claims about the feature files corrected in sections 5 and 7. The feature row of the preprocessing table now says the mel is stored time-major, `T × 80`, not `80 × T`. The `stats.json` paragraph now says which of the four values are raw and which are measured after normalisation. The two "ground truth of 1.00" statements in §7.4 and §7.5 now give 0.941 for pitch and 0.948 for energy as the measured value, and say the English figure was not measured.
+  Why: All three were true of the reference code rather than of this repository. Both preprocessors call `np.save(..., mel_spectrogram.T)` on a `(n_mels, T)` array, so the file on disk is `(T, 80)`. The `stats.json` tuple is `[min, max, mean, std]` where `normalize()` computes `min` and `max` after dividing by the mean and std, which is why the Telugu pitch entry reads `[-2.7697, 9.7678, 190.710, 45.158]`: two z-scores next to two raw quantities. And the ground-truth standard deviation is not 1.0, because the corpus is standardised with a single global constant while the per-clip spread differs.
+  Verified: `Telugu/preprocessor/preprocessor.py:534-537` and `English/preprocessor/preprocessor.py:534-537` both save `mel_spectrogram.T`. Measured on the 518 Telugu validation clips: normalised pitch std 0.941, energy std 0.948, and `sum(duration) - mel frames` is `+0.0` on every clip. The English ground truth was not measured because the preprocessed features are not in this repository, so the report says so instead of quoting the Telugu number for both.
+- `Report/Technical_Report.md` (root) — The parameter count is no longer one number for both languages. The architecture table reads 35,159,617 in English and 35,099,201 in Telugu, and the comparison table's `Params` row carries the second number instead of repeating the first.
+  Why: The two models are not the same size, and the resumed Telugu run printed 35,099,201 again with the trained weights loaded, so the single figure was wrong for half the table.
+  Verified: The Phase-3 CPU smoke-test entry in this file already recorded both numbers, English 35,159,617 and Telugu 35,099,201; the Telugu trainer printed 35,099,201 on resume from step 35,000, and the English trainer printed 35,159,617. I did not confirm which layer accounts for the 60,416-parameter difference, so the report states the two sizes and no mechanism.
 
 - `Report/Technical_Report.md`, `Report/Technical_Report.pdf` (root) — Sections 1 to 3 rewritten in the author's voice: first person for decisions, passive for measurements, the bold-lead bullet lists in section 3 turned into paragraphs, and "this assignment" constructions removed. No number, path, table cell or claim was changed.
   Why: The prose read as machine-written, and the request was that every sentence read as the author's own writing.

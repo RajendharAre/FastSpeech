@@ -35,26 +35,28 @@ BROWSER_CANDIDATES = [
 ]
 
 CSS = """
-@page { size: A4; margin: 18mm 16mm; }
-body { font: 10.5pt/1.5 "Noto Serif", Georgia, serif; color: #111; margin: 0;
+@page { size: A4; margin: 14mm 15mm; }
+body { font: 10pt/1.35 "Noto Serif", Georgia, serif; color: #111; margin: 0;
        font-family: "Noto Serif", Georgia, %(telugu_stack)s serif; }
-h1 { font-size: 17pt; margin: 0 0 1.2em; }
-h2 { font-size: 13pt; margin: 1.6em 0 0.5em; page-break-after: avoid; }
-h3 { font-size: 11.5pt; margin: 1.3em 0 0.4em; page-break-after: avoid; }
+h1 { font-size: 16pt; margin: 0 0 0.8em; }
+h2 { font-size: 12.5pt; margin: 1.1em 0 0.35em; page-break-after: avoid; }
+h3 { font-size: 11pt; margin: 0.9em 0 0.3em; page-break-after: avoid; }
 p, li { orphans: 2; widows: 2; }
+p { margin: 0 0 0.55em; }
 code { font-family: "DejaVu Sans Mono", "Courier New", monospace; font-size: 9pt;
        background: #f3f3f3; padding: 0 2px; }
 pre { background: #f6f6f6; border: 1px solid #ddd; padding: 8px 10px; overflow-x: hidden;
       page-break-inside: avoid; }
 pre code { background: none; padding: 0; }
-table { border-collapse: collapse; width: 100%%; margin: 0.7em 0; font-size: 9.5pt;
-        page-break-inside: avoid; }
-th, td { border: 1px solid #bbb; padding: 4px 6px; text-align: left; vertical-align: top; }
+table { border-collapse: collapse; width: 100%%; margin: 0.45em 0; font-size: 9.2pt; }
+thead { display: table-header-group; }
+tr { page-break-inside: avoid; }
+th, td { border: 1px solid #bbb; padding: 3px 5px; text-align: left; vertical-align: top; }
 th { background: #eee; }
-blockquote { margin: 0.7em 0; padding: 6px 10px; border-left: 3px solid #888;
+blockquote { margin: 0.45em 0; padding: 4px 8px; border-left: 3px solid #888;
              background: #f7f7f2; color: #333; }
 blockquote p { margin: 0; }
-hr { border: none; border-top: 1px solid #ccc; margin: 1.4em 0; }
+hr { border: none; border-top: 1px solid #ccc; margin: 0.8em 0; }
 img { max-width: 100%%; height: auto; }
 """
 

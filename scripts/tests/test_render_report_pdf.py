@@ -46,6 +46,15 @@ class HtmlTest(unittest.TestCase):
         self.assertNotIn("%(", html)
         self.assertIn("100%", html)
 
+    def test_compact_layout_and_table_rows_can_paginate(self):
+        html = to_html("text\n")
+        self.assertIn("font: 10pt/1.35", html)
+        self.assertIn("tr { page-break-inside: avoid; }", html)
+        self.assertIn(
+            "table { border-collapse: collapse; width: 100%; margin: 0.45em 0; font-size: 9.2pt; }",
+            html,
+        )
+
     def test_telugu_font_is_embedded_as_data_uri(self):
         # Only the base64 embedding is under test, so the bytes need not be a real font.
         with tempfile.NamedTemporaryFile(suffix=".ttf", delete=False) as handle:

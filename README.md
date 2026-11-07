@@ -8,11 +8,11 @@ Two **separate** FastSpeech 2 models trained **from scratch** on two datasets:
 | English | Svarah | https://huggingface.co/datasets/ai4bharat/Svarah |
 | Telugu | IndicTTS Telugu | https://huggingface.co/datasets/SPRINGLab/IndicTTS_Telugu |
 
-## Status (2026-11-06)
+## Status (2026-11-07)
 
-Both languages are aligned and preprocessed. English training finished at
-60,000 steps and its five test sentences have been synthesised. Telugu
-training started on 2026-11-06 and is still running.
+Both languages are aligned, preprocessed and trained to 60,000 steps. Telugu
+inference outputs for checkpoints 5,000 and 60,000 are in `Results/Telugu/` in
+separate folders; the 35,000-step comparison is intentionally not included.
 
 | | English (Svarah) | Telugu (IndicTTS) |
 |---|---|---|
@@ -22,7 +22,7 @@ training started on 2026-11-06 and is still running.
 | Speakers | 2 (one female, one male) | 1 (male) |
 | Dropped, by category | 260 (alignment 164, missing TextGrid 71, pitch 20, feature stats 4, transcript 1) | 94 (alignment 83, missing TextGrid 3, missing audio 8) |
 | Aligner | MFA `english_us_arpa` + G2P for 4.47 % OOV | MFA grapheme dictionary trained on the corpus |
-| Training | 60,000 steps; checkpoint 60,000 is the one shipped, picked by listening rather than by loss (7/10 against 5/10 for step 5,000); five test WAVs generated | 60,000 steps configured, running as of 2026-11-06 |
+| Training | 60,000 steps; checkpoint 60,000 is the one shipped, picked by listening rather than by loss (7/10 against 5/10 for step 5,000); five test WAVs generated | 60,000 steps completed; checkpoint 5,000 had the lowest validation loss among saved checkpoints (3.73799); user reports the 60,000-step audio sounds good; 5,000/60,000 outputs kept separately |
 | Audio provenance | exported at 22.05 kHz | **16 kHz source upsampled to 22.05 kHz** |
 
 **English output quality.** All five English test sentences come out
@@ -33,10 +33,10 @@ decode path. The cause is that 4.84 h of audio was memorised over 213 epochs
 instead of generalised, and the variance adaptor collapses towards the mean.
 Report sections 7 and 8 give the measurements.
 
-Still to do before submission: Telugu inference and its variance-adaptor plots,
-report sections 9 and 10, and re-running `scripts/check_no_overlap.py` against
-the final Kaggle manifests (disjointness was reported by the splitter when the
-manifests were built, but the check script has not been run on those files).
+Still to do before submission: the Telugu listening review, report section 10,
+and re-running `scripts/check_no_overlap.py` against the final Kaggle manifests
+(disjointness was reported by the splitter when the manifests were built, but
+the check script has not been run on those files).
 
 Completed work: Phase 0 (skeleton), Phase 1 (dataset inspection), the
 pre-training infrastructure fixes (environment, training control, preprocessing
@@ -45,9 +45,11 @@ provenance in the manifests, the G2P supplementary-dictionary builder, the
 variance-adaptor plot/array export in `inference.py` and the loss-CSV plotting
 script. The resumed English training and validation loss plots are in
 `Results/English/`; English inference at checkpoint step 35,000 generated five
-WAVs plus duration, pitch, and energy plots/JSONs in the Kaggle working copy.
-Section 7 of `Report/Technical_Report.md` discusses the plots' scope and the
-earlier overlapping-run log limitation. `CHANGES.md` records every change.
+WAVs plus duration, pitch, and energy plots/JSONs. Telugu inference outputs for
+steps 5,000 and 60,000 are in separate subfolders under `Results/Telugu/`.
+Kaggle lacked a Telugu font, so those plots use code-point fallback labels.
+Section 7 of `Report/Technical_Report.md` discusses the English plots' scope and
+the earlier overlapping-run log limitation. `CHANGES.md` records every change.
 
 ## Repository layout
 

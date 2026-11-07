@@ -17,7 +17,7 @@ linked below.
 | Parameters | 35,099,201 |
 | Validation total loss | 3.791061 |
 | Selected by | listening: a slight preference for 60,000 over 5,000 |
-| Download link | [Google Drive](https://drive.google.com/file/d/1oWwu6tj8OJB1LzTbzqOeZ2X-xfOOQmmK/view?usp=drive_link) |
+| Download link | [Google Drive](https://drive.google.com/drive/folders/1oWwu6tj8OJB1LzTbzqOeZ2X-xfOOQmmK) |
 
 I chose 60,000 by ear rather than by loss. Among saved checkpoints, step 5,000
 had the lowest validation loss, 3.73799, and the overall validation minimum was

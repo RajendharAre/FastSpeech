@@ -17,7 +17,7 @@ shipped checkpoint is hosted externally and linked below.
 | Parameters | 35,159,617 |
 | Validation total loss | 4.0910 |
 | Selected by | listening: 7/10 against 5/10 for step 5,000 |
-| Download link | [Google Drive](https://drive.google.com/file/d/1JSXN7jV-aT9zfuqd5T9ZnVsaMg9u4gDu/view?usp=drive_link) |
+| Download link | [Google Drive](https://drive.google.com/drive/folders/1JSXN7jV-aT9zfuqd5T9ZnVsaMg9u4gDu) |
 
 I chose 60,000 by ear rather than by loss. Validation loss would have picked
 35,000 (4.0838) and ASR WER would have picked 5,000 (1.04), but at WER near 1.0

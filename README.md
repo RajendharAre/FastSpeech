@@ -427,8 +427,8 @@ shipped weights are hosted externally and linked here.
 
 | Language | Shipped step | Parameters | Download |
 |---|---|---|---|
-| English | 60,000 | 35,159,617 | [Download checkpoint](https://drive.google.com/file/d/1JSXN7jV-aT9zfuqd5T9ZnVsaMg9u4gDu/view?usp=drive_link) |
-| Telugu | 60,000 | 35,099,201 | [Download checkpoint](https://drive.google.com/file/d/1oWwu6tj8OJB1LzTbzqOeZ2X-xfOOQmmK/view?usp=drive_link) |
+| English | 60,000 | 35,159,617 | [Download checkpoint](https://drive.google.com/drive/folders/1JSXN7jV-aT9zfuqd5T9ZnVsaMg9u4gDu) |
+| Telugu | 60,000 | 35,099,201 | [Download checkpoint](https://drive.google.com/drive/folders/1oWwu6tj8OJB1LzTbzqOeZ2X-xfOOQmmK) |
 
 `English/checkpoints/README.md` and `Telugu/checkpoints/README.md` record the
 selection rationale, the payload format, the resume command and the config

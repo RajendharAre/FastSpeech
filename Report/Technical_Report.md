@@ -582,15 +582,17 @@ how the data, frontend and training budget affected these results. Section 10.5 
 | Validation mel L1 | about 1.05 | 0.9425 |
 | Validation pitch MSE | 0.68 | 1.0410 |
 | Validation energy MSE | 1.15 | 0.7898 |
-| Predicted pitch σ, shipped checkpoint | 0.34 | 0.599 |
-| Predicted energy σ, shipped checkpoint | 0.45 | 0.630 |
+| Predicted pitch σ, shipped checkpoint | 0.33 | 0.599 |
+| Predicted energy σ, shipped checkpoint | 0.44 | 0.630 |
 | ASR WER | 1.04 to 1.27 | not measurable with this probe |
 | Listening | 7/10, words missed, noise at the end | My sentence-level notes in Section 8.2; slight preference for 60,000 over 5,000 |
 
 *Table 10.1. The three loss rows are not taken at the same step: the English values are the resumed-segment levels
 reported in Section 7.3, and the Telugu values are the step-36,000 validation tabulated in Section 7.5. The full Telugu
 curves to step 60,000 are Figures 7.3 and 7.4. The spread, WER and listener rows are at the shipped checkpoint, 60,000
-in both languages.*
+in both languages. The two spread rows are the mean of the per-sentence standard deviations of the predicted normalised
+values, computed from the shipped payloads in `Results/`; the Kaggle A/B decode in Section 7.4 gives the same English
+figures to within 0.01.*
 
 The loss rows need a scale note before they are read as a ranking. The mel L1 is directly comparable: neither
 pipeline normalises the mel, `dataset.py` loads the saved log-mel array unchanged, and both use the same 80 bands with
@@ -658,7 +660,7 @@ near 0.62 against validation near 1.05, and Telugu training mel 0.4060 against v
 one directly comparable loss, Telugu ends about 10 percent lower than English, 0.9425 against 1.05, which is
 consistent with my impression that some Telugu sentences were clearer. On the prosody losses the ordering reverses,
 English pitch 0.68 against Telugu 1.0410, yet
-Telugu's predicted pitch spread is nearly twice English's, 0.599 against 0.34. Loss and output spread disagree about
+Telugu's predicted pitch spread is nearly twice English's, 0.599 against 0.33. Loss and output spread disagree about
 which language did better, so neither on its own ranks the two models. I base my preference on listening and use the
 control battery in Section 8.3 to diagnose the English output.
 
@@ -677,7 +679,9 @@ the scored 5/10-to-7/10 English listening pass, and the Telugu percentages are s
 scores.
 
 There are also limits to what I can reproduce from the files in the repository. The English prediction payloads here
-are from step 35,000, so the English step-60,000 figures come from the Kaggle measurements in Section 7.4. The final
+are the step-60,000 export, regenerated on CPU from the backed-up checkpoint so they match the shipped weights; the
+earlier 35,000-step export is outside the Git repository under
+`../FastSpeech_Data/English_Data/checkpoint_35000/`. The final
 Telugu payloads are in the results folder, while the 5,000-step comparison payloads are outside the Git repository
 under `../FastSpeech_Data/Telugu/`. I did not measure the English ground-truth pitch and energy standard deviations,
 so that baseline remains approximate. The Telugu plot labels use code-point fallbacks because the Kaggle environment

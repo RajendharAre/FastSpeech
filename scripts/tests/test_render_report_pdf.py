@@ -33,8 +33,19 @@ class HtmlTest(unittest.TestCase):
 
     def test_table_is_rendered_as_html(self):
         html = to_html("| ID | Sentence |\n|---|---|\n| E3 | The rhythm. |\n")
-        self.assertIn("<table>", html)
+        self.assertIn("<table", html)
         self.assertIn("E3", html)
+
+    def test_short_tables_are_kept_together_and_long_tables_are_not(self):
+        short = "| a | b |\n|---|---|\n" + "".join(
+            "| {} | {} |\n".format(i, i) for i in range(10)
+        )
+        long = "| a | b |\n|---|---|\n" + "".join(
+            "| {} | {} |\n".format(i, i) for i in range(20)
+        )
+        self.assertIn('<table class="keep-together">', to_html(short))
+        self.assertNotIn("keep-together", to_html(long).split("</style>")[-1])
+        self.assertIn("table.keep-together { page-break-inside: avoid; }", to_html(short))
 
     def test_utf8_meta_and_telugu_survive(self):
         html = to_html("పులి అడవిలో నడిచింది.\n")

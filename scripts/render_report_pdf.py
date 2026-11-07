@@ -49,6 +49,7 @@ pre { background: #f6f6f6; border: 1px solid #ddd; padding: 8px 10px; overflow-x
       page-break-inside: avoid; }
 pre code { background: none; padding: 0; }
 table { border-collapse: collapse; width: 100%%; margin: 0.45em 0; font-size: 9.2pt; }
+table.keep-together { page-break-inside: avoid; }
 thead { display: table-header-group; }
 tr { page-break-inside: avoid; }
 th, td { border: 1px solid #bbb; padding: 3px 5px; text-align: left; vertical-align: top; }
@@ -77,10 +78,21 @@ def telugu_face(font_path):
     return face, "'ReportTelugu',"
 
 
+def keep_short_tables(body):
+    """Stop a small table breaking across pages and leaving orphan rows behind."""
+    def tag(match):
+        block = match.group(0)
+        if block.count("<tr>") <= 12:
+            return block.replace("<table>", '<table class="keep-together">', 1)
+        return block
+
+    return re.sub(r"<table>.*?</table>", tag, body, flags=re.S)
+
+
 def to_html(markdown_text, font_path=None, markdown_path=None):
     from markdown_it import MarkdownIt
 
-    body = MarkdownIt("commonmark").enable("table").render(markdown_text)
+    body = keep_short_tables(MarkdownIt("commonmark").enable("table").render(markdown_text))
     if markdown_path is not None:
         markdown_dir = Path(markdown_path).resolve().parent
 

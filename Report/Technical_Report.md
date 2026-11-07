@@ -1,11 +1,13 @@
 # Technical Report - FastSpeech 2 (English and Telugu)
 
-**Status: draft.** Sections 1 to 8 and section 11 use measured values recorded in `CHANGES.md`.
-Section 7 compares four retained English checkpoints using validation loss and speech recognition. Section 8 reports
-the controlled tests of the English results. Telugu training is complete, and the 60,000-step checkpoint is the Telugu
+**Status: draft, all sections written.** Every section uses measured values recorded in `CHANGES.md`.
+Section 7 presents English and Telugu training and validation curves, and compares four retained English checkpoints
+using validation loss and speech recognition. Section 8 reports the controlled tests of the English results. Section 9
+analyses the Telugu variance-adaptor predictions, and Section 10 compares the two languages and separates the causes
+into data, frontend and training budget. Telugu training is complete, and the 60,000-step checkpoint is the Telugu
 inference result presented in this report. The 5,000-step checkpoint had a lower validation loss of 3.73799, compared
-with 3.791061 at step 60,000. The user preferred the sound of the 60,000-step audio. Sections 9 and 10 still need
-completion.
+with 3.791061 at step 60,000; I preferred the sound of the 60,000-step audio. The evidence I still lack is named in
+Section 10.5: a Telugu intelligibility score and a scored Telugu listening pass.
 
 Section map against the seven items the assignment PDF asks the report to cover:
 
@@ -13,10 +15,10 @@ Section map against the seven items the assignment PDF asks the report to cover:
 |---|---|
 | Implementation approach, architecture components, modifications per language | 1, 2, 3 |
 | Dataset selection, subsampling, preprocessing, split, training configuration | 4, 5, 6 |
-| Loss-curve analysis: convergence, instability, overfitting | 7 (resumed-run plots and four-checkpoint comparison) |
+| Loss-curve analysis: convergence, instability, overfitting | 7 (English and Telugu curves and checkpoint comparisons) |
 | Generated-speech observations per test sentence (pronunciation, quality) | 8 (English diagnostics measured; Telugu 60,000-step outputs available, with preliminary listening feedback) |
-| Variance-adaptor analysis (duration, F0, energy) per test sentence | 9 (pending) |
-| English vs Telugu comparison, limitations, failures, improvements | 10 (pending) |
+| Variance-adaptor analysis (duration, F0, energy) per test sentence | 9 |
+| English vs Telugu comparison, limitations, failures, improvements | 10 (measured side-by-side, causes separated, evaluation gaps named) |
 | Reproducibility: dependencies, configs, commands | 11 |
 
 ---
@@ -346,6 +348,29 @@ to place a contour on a clip they have not seen. That is the English failure of 
 Telugu split is 2,751 training clips, so one epoch is 172 steps and 60,000 steps is 349 passes over the same audio,
 against 213 for English.
 
+### 7.6 Telugu training curve
+
+![Telugu training loss from steps 0 to 60,000](../Results/Telugu/training_loss.png)
+
+*Figure 7.3. Telugu training total and component losses across the completed run.*
+
+The total training loss falls rapidly at the beginning, then settles near 0.8 to 0.9 for most of the run. The mel and
+post-net losses decrease early and then flatten, while pitch, energy and duration continue improving before also
+leveling off. This is a training-set curve: the much higher validation loss, shown next, indicates that the continued
+fit to training data did not translate into comparable held-out performance.
+
+### 7.7 Telugu validation curve
+
+![Telugu validation loss from steps 0 to 60,000](../Results/Telugu/validation_loss.png)
+
+*Figure 7.4. Telugu validation total and component losses across the completed run.*
+
+Validation total loss varies substantially during the early part of training, reaches its lowest observed value at
+step 2,000 (3.6590), and then remains close to 3.78 to 3.83. At step 60,000 it is 3.791061. The component curves
+are comparatively flat after the early steps, especially pitch and energy; neither shows a sustained late-run
+improvement. Among the saved checkpoints, 5,000 has the lowest validation loss (3.73799), while the 60,000-step
+checkpoint is the inference result selected for this report based on the user's listening preference.
+
 ## 8. Test-sentence observations: English measured and heard, Telugu inference available
 
 I took all ten sentences from `docs/test_sentences.json`, field `final`, unmodified: E1, E2a, E2b, E3, E4 and T1, T2a,
@@ -522,12 +547,152 @@ variance adaptors are doing the right kind of thing at the wrong amplitude, whic
 generalise rather than in the interface between text and duration. `sum(duration)` equals `mel_frames` on all ten clips
 at both checkpoints, so the length regulator has never been the suspect.
 
-## 10. English vs Telugu comparison - pending
+## 10. English vs Telugu comparison
 
-Both models are trained and inference sets exist. The full comparison still needs to connect data-side differences
-(two speakers vs one, read vs read/spontaneous, 16 kHz upsampled Telugu, English lexicon + G2P vs Telugu grapheme
-model) to observed pronunciation accuracy (English OOV names and loanwords vs Telugu conjuncts and digits), and
-separate failures attributable to data, the frontend, and the training budget.
+The two runs are the same experiment performed twice: the same reference architecture, the same pretrained HiFi-GAN
+universal vocoder, the same Noam schedule and anneal points, the same 60,000 steps, and almost the same amount of audio,
+4.842 h against 4.700 h. What differs is the corpus and the text frontend, and the outcomes differ sharply. English is
+unintelligible: WER 1.04 to 1.27 against a LibriSpeech control of 0.000, and a listener score of 7/10 for the best of four
+checkpoints. Telugu is reported by the listener as sounding good, and its predictions carry measurable prosodic structure
+(Section 9). This section separates what the data, the frontend and the training budget each explain, and states plainly
+what I could not measure.
+
+### 10.1 The two runs side by side
+
+| Quantity | English (Svarah) | Telugu (IndicTTS) |
+|---|---|---|
+| Usable audio | 4.842 h | 4.700 h |
+| Training clips | 4,500 | 2,751 |
+| Speakers | 2 (one female, one male) | 1 (male) |
+| Speech style | read and spontaneous, collected for ASR | read, collected for TTS |
+| Source sample rate | 22.05 kHz native | 16 kHz upsampled to 22.05 kHz |
+| Text frontend | lexicon + G2P, ARPAbet phones | character-level graphemes |
+| Symbol table | 360 | 124 |
+| Text embedding | 361 x 256 = 92,416 | 125 x 256 = 32,000 |
+| Total parameters | 35,159,617 | 35,099,201 |
+| Epochs at 60,000 steps | 213 | 349 |
+| Validation mel L1 | about 1.05 | 0.9425 |
+| Validation pitch MSE | 0.68 | 1.0410 |
+| Validation energy MSE | 1.15 | 0.7898 |
+| Predicted pitch σ, shipped checkpoint | 0.34 | 0.599 |
+| Predicted energy σ, shipped checkpoint | 0.45 | 0.630 |
+| ASR WER | 1.04 to 1.27 | not measurable with this probe |
+| Listener | 7/10, words missed, noise at the end | "sounds good", preliminary |
+
+*Table 10.1. The three loss rows are not taken at the same step: the English values are the resumed-segment levels
+reported in Section 7.3, and the Telugu values are the step-36,000 validation tabulated in Section 7.5. The full Telugu
+curves to step 60,000 are Figures 7.3 and 7.4. The spread, WER and listener rows are at the shipped checkpoint, 60,000
+in both languages.*
+
+The loss rows need a scale note before they are read as a ranking. The mel L1 is directly comparable: neither
+pipeline normalises the mel, `dataset.py` loads the saved log-mel array unchanged, and both use the same 80 bands with
+`mel_fmax` 8000, so the 16 kHz Telugu source loses no band the model actually sees. Pitch and energy are not on a shared
+distribution: each is divided by its own corpus mean and σ, so the MSEs have the same construction but a different
+baseline. The ground-truth σ was measured only for Telugu, 0.941 for pitch and 0.948 for energy, which puts the
+predict-the-mean baseline at 0.885 and 0.899 rather than 1.0. Against those measured baselines the Telugu pitch loss is
+above baseline at every step listed in Section 7.5, the closest being 0.9141 at step 1,000, while the energy loss is
+below baseline at every step. English pitch MSE 0.68 cannot be placed against a measured baseline at all, because I
+never extracted the English ground-truth σ. Sections 7.4 and 7.5 use 1.0 as the baseline shorthand; for Telugu the
+measured values are the two above, and for English the baseline remains unmeasured.
+
+The parameter difference is now fully attributed. `transformer/Models.py` builds the text embedding as
+`nn.Embedding(len(symbols) + 1, encoder_hidden)` with `encoder_hidden` 256 in both configs, so English carries
+361 x 256 = 92,416 embedding parameters and Telugu 125 x 256 = 32,000. The difference is 60,416, which is exactly
+35,159,617 minus 35,099,201. Apart from the size of that one table the two models are identical, so any difference in
+their output is not a difference in capacity.
+
+### 10.2 What the data explains
+
+The English corpus was collected for speech recognition, not synthesis. It is two speakers producing read and
+spontaneous Indian-accented English, which means variable speaking rate, disfluency and inconsistent articulation, and
+its 4,500 training clips are divided between two voices, so neither voice contributes the whole corpus. The Telugu
+corpus is one male speaker reading prepared sentences for a TTS benchmark, so all 2,751 training clips are the same
+voice with consistent prosody.
+That is the largest single difference between the runs, and it points the same way as the outcome: the model asked to
+learn two voices from less data per voice failed, and the model asked to learn one voice from a cleaner corpus produced
+speech the listener accepts.
+
+It does not follow that Telugu generalised. Section 7.5 measures a 49-fold training-to-validation gap on pitch and a
+35-fold gap on energy, against 2.3-fold on the spectral losses, so the Telugu prosody adaptors have memorised contours
+on the training clips and cannot place one on an unseen clip. Telugu also ran more passes over its audio, 349 epochs
+against 213, and finished 3.6 percent above its own validation minimum: 3.6590 at step 2,000 against 3.791061 at the
+final saved checkpoint. More epochs bought memorisation in both languages, not generalisation in either.
+
+### 10.3 What the frontend explains
+
+The frontends differ in kind, not just in language. English maps words to ARPAbet phones through a lexicon with a G2P
+fallback, so an out-of-vocabulary word receives a guessed pronunciation and the model must then learn a phone-to-sound
+mapping for phones it has rarely seen. E1's loanword and E4's `andaroo` are exactly that case. Telugu maps characters
+directly to a 124-symbol table, so there is no out-of-vocabulary condition inside the script: any Telugu character maps
+to a symbol the model has an embedding for, whether or not that character occurred often in training. The measured
+consequence is visible in the payloads. E1's 108 normalised characters
+become 85 phonemes, while T1's 68 characters stay 68 symbols. The English rows of Table 8.1 count characters of the
+normalised string, not the phonemes the model receives; the phoneme counts are 85, 50, 56, 37 and 81 for E1, E2a, E2b,
+E3 and E4. For Telugu the two counts coincide, which is why that column reads correctly there.
+
+The character-level choice has a cost that Section 9 measures. A Telugu character is not a phone: conjunct consonants
+and vowel signs are split across symbols, so the duration predictor has to learn to group them, and it does not
+lengthen the final syllable, the last content symbol sitting at 0.57 to 1.00 of the median in all five sentences. A
+phone-level or syllable-level unit would not have that problem.
+
+Digits separate the two frontends most cleanly. English normalises them: E4's `10:45 AM` and `12 November 2026` become
+`ten:forty-five am` and `twelve november twenty twenty-six`, 115 characters and 81 phonemes, and the saved phoneme
+sequence confirms the expansion happened. Telugu has no number-to-words stage, so T4's `2026`, `12` and `10:45` reach
+the model as ASCII digit symbols that exist in the table but have essentially no training examples. T4 is therefore
+expected to fail on the date and time and to be intelligible around them. That is a gap in my frontend, not a training
+failure, and it is the one Telugu test sentence whose outcome I can predict from the text alone.
+
+### 10.4 What the training budget explains
+
+Both runs used 60,000 steps against the reference's 900,000, with the anneal points scaled to keep the reference
+fractions. Neither run is close to converged in the reference's sense, and both overfit: English training mel L1 settles
+near 0.62 against validation near 1.05, and Telugu training mel 0.4060 against validation 0.9425 at step 36,000. On the
+one directly comparable loss, Telugu ends about 10 percent lower than English, 0.9425 against 1.05, which agrees with
+the listener's preference. On the prosody losses the ordering reverses, English pitch 0.68 against Telugu 1.0410, yet
+Telugu's predicted pitch spread is nearly twice English's, 0.599 against 0.34. Loss and output spread disagree about
+which language did better, so neither on its own ranks the two models, and I have relied on the listener for the
+ranking and on the control battery in Section 8.2 for the diagnosis.
+
+The infrastructure interruptions did not change this. English was killed by the OOM killer at step 32,000 and resumed
+from 30,000; Telugu was cut by a container restart at 36,695 and resumed from 35,000. Both resumes restored the
+optimizer and RNG state and continued the schedule from `restore_step`, and the Telugu resumed segment matched the dead
+run's own losses at the same steps inside that run's step-to-step noise. Neither failure cost more than about 2,000
+steps, and neither is a candidate explanation for the output quality.
+
+### 10.5 What I could not measure
+
+There is no Telugu intelligibility number. The probe used for English is `facebook/wav2vec2-base-960h`, an English
+LibriSpeech model, so it cannot transcribe Telugu; running it on the Telugu WAVs would produce a meaningless score
+rather than a comparable one. A Telugu ASR model was not run, so the cross-language comparison rests on one listener's
+preliminary report for Telugu against a scored 5/10-to-7/10 pass for English. Those are not the same kind of evidence.
+
+Three further asymmetries bound the table. The English prediction payloads kept in this repository are the 35,000-step
+export, so the per-checkpoint English figures at 60,000 come from the Kaggle measurements recorded in Section 7.4 rather
+than from files a reader can re-run here; the Telugu payloads for 5,000 and 60,000 are both present. The English
+ground-truth pitch and energy σ was never measured, so its baseline is approximate. And the Telugu plots were rendered
+on a host with no Telugu font, so their axis labels use code-point fallbacks while the report's own tables carry the
+actual characters.
+
+### 10.6 Limitations, failures and what I would change
+
+Sorted by cause rather than by symptom:
+
+| Cause | Failure observed | What I would change |
+|---|---|---|
+| Data | English unintelligible after 213 epochs of 4.84 h across two voices; Telugu prosody memorised, pitch σ 0.599 against a corpus 0.941 | More audio per voice, or one voice. The reference recipe uses LJSpeech, about 24 h from a single speaker; 4.8 h across two voices is below what a 35-million-parameter model needs |
+| Frontend | Telugu digits unnormalised in T4; no final-syllable lengthening because characters are not phones | A number-to-words stage for Telugu, and a syllable or phone unit so conjuncts are one symbol |
+| Frontend | English OOV words get a guessed pronunciation (E1, E4 `andaroo`) | Install `g2p_en` and use the supplementary dictionary that was built but never exercised |
+| Training | Both runs overfit; Telugu validation mel bottoms at 10,000 and rises afterwards | Stop on validation mel rather than a fixed step count, and keep the checkpoint the curve selects |
+| Training | Variance adaptors collapse toward the mean in both languages | Lower the adaptor dropout or reweight the prosody losses. This is a training-design change and was not attempted |
+| Evaluation | One listener, five sentences per language, an English-only ASR probe | A Telugu ASR model and more than one listener before any quality claim is treated as established |
+| Infrastructure | English OOM at 32,000, Telugu container restart at 36,695 | Already mitigated: atomic checkpoint writes, a free-disk pre-check, and `save_step` sized to the volume |
+
+The honest summary is that the Telugu model works well enough to be judged by ear and the English model does not, that
+the difference is explained by the corpus and the frontend rather than by the architecture or the step count, and that
+both models share the same underlying limitation: neither prosody adaptor generalises off its training clips at this
+data scale. I report the English result as a diagnosed negative result rather than presenting it as working speech, and
+the Telugu result as a listener preference supported by the prediction measurements in Section 9 rather than by an
+intelligibility score I do not have.
 
 ## 11. Reproducibility
 

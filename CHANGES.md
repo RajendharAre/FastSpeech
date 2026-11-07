@@ -22,20 +22,40 @@ plots plus five prediction JSONs per checkpoint. Both sets are copied into
 separate folders under `Results/Telugu/`; the 35,000-step comparison is
 intentionally excluded. The console warned that no Telugu font was installed,
 so plot labels use code-point fallbacks. The user reports that the 60,000-step
-audio sounds good; detailed listening review and report sections 9 and 10
-remain pending.
+audio sounds good; a scored listening review is still outstanding.
 
-The report rewrite in the author's voice has sections 1 to 9 drafted; section 10,
-the English-versus-Telugu comparison, is the last one left. The 60,000-step
+All eleven report sections are written. Section 9 analyses the Telugu
+variance-adaptor predictions, and section 10 compares the two languages and
+separates the causes into data, frontend and training budget. The 60,000-step
 Telugu inference outputs are present locally and are the only Telugu inference
-result presented in the report. The 5,000-step validation loss and 5,000-step
-prediction figures are reported as comparisons.
+result presented in the report; the 5,000-step validation loss and prediction
+figures are reported as comparisons.
 
-Still outstanding: the English-versus-Telugu comparison in section 10, Telugu
-loss plots over the full 0 to 60,000 curve, Telugu WER, checkpoint hosting,
-and re-running `scripts/check_no_overlap.py` against the final Kaggle manifests.
+Still outstanding: a Telugu intelligibility score (the English ASR probe cannot
+transcribe Telugu), a scored Telugu listening pass, checkpoint hosting, and
+re-running `scripts/check_no_overlap.py` against the final Kaggle manifests.
+Three report inaccuracies found while writing section 10 are recorded in the
+change log below and are not yet corrected.
 
 ## Change log
+
+### 2026-11-07
+
+- `Report/Technical_Report.md`, `Report/Technical_Report.pdf` (root) — Section 10, "English vs Telugu comparison", written in place of the pending block: Table 10.1 side by side, a scale note on which losses are comparable, the parameter difference attributed to the text embedding, and subsections on what the data, the frontend and the training budget each explain, what could not be measured, and a cause-sorted limitations table. The status block and the section map now say all eleven sections are written.
+  Why: Section 10 was the last pending section, and the assignment asks it to separate failures attributable to data, frontend and training budget rather than list symptoms.
+  Verified: Symbol tables counted by importing both `text/symbols.py` modules, 360 English and 124 Telugu. `transformer/Models.py:40,56` builds `nn.Embedding(len(symbols) + 1, encoder_hidden)` and both configs set `encoder_hidden: 256`, so 361 x 256 = 92,416 against 125 x 256 = 32,000, a difference of 60,416, exactly 35,159,617 minus 35,099,201. `Telugu/dataset.py:43` loads the mel `.npy` with no normalisation and `Telugu/utils/tools.py:38` only casts it to float, so mel L1 is on the same log-mel scale in both languages. Baselines computed as 0.941² = 0.885 and 0.948² = 0.899; every Telugu pitch value in Section 7.5 is above 0.885 and every energy value below 0.899. English phoneme counts 85, 50, 56, 37, 81 read from `Results/English/variance_adaptor_plots/*.json`, whose `text` field is the raw string and whose `checkpoint_step` is 35000 in all five. Telugu spread 0.599 pitch and 0.630 energy from `python scripts/summarise_variance_export.py`. Final validation 3.791061 against the 3.6590 minimum is 3.6 percent. `python scripts/render_report_pdf.py --check`: no problems, 224 Telugu code points drawn, all Latin sentences present, PDF 1,226,188 bytes, 18 pages.
+
+- `scripts/render_report_pdf.py`, `scripts/tests/test_render_report_pdf.py` (root) — Tables of twelve rows or fewer now carry `class="keep-together"` with `page-break-inside: avoid`, so a small table moves to the next page whole instead of leaving orphan rows behind. Longer tables still paginate per row.
+  Why: Section 10 pushed Appendix A over a page boundary and the build left a final page holding 97 characters, two table rows and nothing else.
+  Verified: `python -m unittest discover -s scripts/tests` passes 56 tests, including a new one asserting a ten-row table gets the class and a twenty-row table does not. The rebuilt PDF's last page holds 781 characters, the end of section 11 plus the whole Appendix A table, instead of 97.
+
+- Three report inaccuracies found while verifying section 10, recorded here and NOT yet corrected: (1) the English rows of Table 8.1 are labelled "Symbols" but count characters of the normalised string, 108/72/75/49/115, while the model receives 85/50/56/37/81 phonemes; the Telugu rows are correct because characters and symbols coincide there. Section 10.3 states the distinction, but the Table 8.1 header still mislabels it. (2) Sections 7.4 and 7.5 use 1.0 as the predict-the-mean baseline; the measured Telugu baselines are 0.885 for pitch and 0.899 for energy, so section 7.5's "pitch is below the 1.0 baseline only at steps 1,000 and 2,000" is true against 1.0 but misleading against the measured value, since 0.9141 is above 0.885. Section 10.1 gives the correct arithmetic. (3) Section 5 says the manifests "are committed under `English/manifests/` and `Telugu/manifests/`"; `git ls-files` shows only `.gitkeep` in both, so the manifests are not in this repository.
+  Why: Each was checked against the code or the files rather than assumed, and each is a claim a reader could act on. They are logged separately so the corrections can be applied and verified one at a time.
+  Verified: (1) `len(d['symbols'])` against `len(d['text'])` in all five English payloads, and the normalised E4 string measured at 115 characters. (2) 0.941² and 0.948² against every pitch and energy value in the Section 7.5 table. (3) `git ls-files English/manifests Telugu/manifests` returns the two `.gitkeep` files only, and `.gitignore` has no manifest rule, so they were never added rather than being ignored.
+
+- `Results/Telugu/training_loss.png`, `Results/Telugu/validation_loss.png`, and `Report/Technical_Report.md` (root) - Added the Telugu training and validation curves for steps 0 to 60,000, with captions and interpretation in Sections 7.6 and 7.7. Renamed the supplied plot files to match the required per-language deliverable filenames.
+  Why: Section 7 previously showed English curves only, despite already discussing Telugu validation values and checkpoint loss.
+  Verified: Both PNGs are valid 1,500 x 1,050 images. Their visible step range is 0 to 60,000. The validation plot agrees with the recorded minimum at step 2,000 (3.6590), saved-checkpoint minimum at 5,000 (3.73799), and final value at 60,000 (3.791061).
 
 ### 2026-11-06
 

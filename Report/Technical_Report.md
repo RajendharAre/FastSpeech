@@ -222,31 +222,41 @@ that run's own step-to-step noise, which spans about 0.10 in total loss from one
 
 ## 7. Loss analysis and checkpoint comparison
 
-I read the figures in this section from the clean loss CSVs written after I resumed from the preserved 30,000-step
-checkpoint, so they cover only the resumed segment, roughly steps 30,000 to 60,000, and not the full run from
-initialisation. The first run's log and CSVs were written by two overlapping training processes, so I did not join their
-pre-resume values to these curves or use them to pick a checkpoint. The final validation total loss at step 60,000 was
-4.0910, and the Kaggle log confirms that `checkpoints/60000.pth.tar` was saved.
+The loss CSVs from the original run were written by two overlapping training processes and contain interleaved rows, so
+I did not use those CSVs. PID 28091 was the separate process that was stopped during cleanup; its TensorBoard event file
+preserved scalar history through step 25,600 for training and 25,000 for validation. I recovered that history separately:
+training steps 100–25,600 at 100-step intervals and validation steps 1,000–25,000 at 1,000-step intervals, with
+strictly increasing steps and no duplicates. PID 28091 was a separate process started from step 0; it is not the
+checkpoint lineage used for the later resume. The clean CSVs from the resumed run cover training steps 30,100–60,000
+and validation steps 31,000–60,000. The figures show both sets of recorded values as separate segments, with the
+unrecorded intervals left blank; they do not represent one continuous 0–60,000 run. The final resumed-run validation
+total loss at step 60,000 was 4.0910, and the Kaggle log confirms that `checkpoints/60000.pth.tar` was saved.
 
 ### 7.1 Training curve
 
-![English resumed-run training loss from steps 30,000 to 60,000](../Results/English/training_loss.png)
+![English training loss: recorded values from the original and resumed runs, with the missing interval left blank](../Results/English/training_loss.png)
 
-*Figure 7.1. Training total and component losses for the resumed segment.*
+*Figure 7.1. The early segment is from the separate PID 28091 process (steps 100–25,600); the later segment is from
+the clean run resumed from checkpoint 30,000 (steps 30,100–60,000). The gray interval has no recorded values. These
+segments are not joined or treated as a continuous training trajectory.*
 
-Over the resumed segment the training total loss moves around 1.1 to 1.4 with several transient spikes and no clear
-downward trend. Mel and post-net losses stay close together and comparatively steady; pitch has the largest visible
-spikes. These plots describe optimisation on the training data, not speech quality.
+In the early process, training total loss falls sharply at first and then declines more gradually to about 1.3 by step
+25,600. In the resumed segment it fluctuates around 1.1 to 1.4, with transient spikes and no clear downward trend.
+The two segments come from separate processes, so their apparent levels are descriptive and should not be read as
+evidence of a continuous trajectory. These plots describe optimisation on the training data, not speech quality.
 
 ### 7.2 Validation curve
 
-![English resumed-run validation loss from steps 30,000 to 60,000](../Results/English/validation_loss.png)
+![English validation loss: recorded values from the original and resumed runs, with the missing interval left blank](../Results/English/validation_loss.png)
 
-*Figure 7.2. Validation total and component losses for the resumed segment.*
+*Figure 7.2. The early segment is from the separate PID 28091 process (steps 1,000–25,000); the later segment is from
+the clean run resumed from checkpoint 30,000 (steps 31,000–60,000). The gray interval has no recorded values. These
+segments are not joined or treated as a continuous training trajectory.*
 
-Validation total loss varies inside a narrow band near 4.08 to 4.09 and ends at 4.0910 on step 60,000, and the component
-curves are comparatively flat over the same interval. The plotted scale is not fine enough for me to read the exact
-minimum step off the image, so the checkpoint comparison in Section 7.4 uses the validation CSV instead.
+In the early process, validation total loss reaches its minimum, 3.8246, at step 7,000 and then rises to 4.0476 at
+step 25,000. In the resumed segment it stays near 4.08–4.09 and ends at 4.0910 on step 60,000. The event-file minimum
+describes PID 28091 only; because that process is not the resumed checkpoint lineage, I do not use it to rank the
+checkpoints in Section 7.4.
 
 ### 7.3 Convergence, generalisation and checkpoint selection
 
@@ -258,10 +268,10 @@ stays near **1.05**; validation pitch MSE is **0.68** and energy MSE **1.15** ag
 baseline. A model that reproduces its own training mel to 0.62 and only reaches 1.05 on held-out text is overfitting,
 not underfitting.
 
-Where validation bottoms out is the one number in this section I cannot report cleanly. The pre-restart validation
-records put the minimum near step 7,000, after which validation rose to 4.0910 at step 60,000 while training loss kept
-falling, but two processes wrote those log files, so I do not trust the step. The direction agrees with the overfitting
-above; the exact step does not survive scrutiny.
+The recovered PID 28091 event series has a validation minimum of 3.8246 at step 7,000, followed by a rise to 4.0476
+at step 25,000. This is evidence of worsening validation loss in that process, but I cannot use it to identify the
+best checkpoint in the separate run resumed from step 30,000. For checkpoint selection, I use only validation values
+whose provenance matches the checkpoint being assessed.
 
 Because the three rankings in Section 7.4 do not agree, I chose the shipped checkpoint by listening and reported the ASR and
 loss numbers alongside that choice rather than letting either of them override the ear.
@@ -285,8 +295,9 @@ equivalent, so 1.0 is an approximate target. A predicted 0.3 is a near-constant 
 Note: Mean WER over E1, E2a, E2b and E3 (lower is better). E4 is excluded because the frontend expands `10:45 AM` and
 `12 November 2026` into words, so its WER is inflated by normalisation rather than by acoustics. WER 1.0 means every
 word is an error.
-The pre-restart loss logs are contaminated by overlapping processes, so no reliable loss value can be attached to the
-English checkpoints at 5,000 and 10,000.
+The early event file records validation totals of 3.8918 at step 5,000 and 3.9570 at step 10,000, but it belongs to
+PID 28091, not the resumed checkpoint lineage. I therefore do not attach those values to the 5,000- and 10,000-step
+checkpoints in this table. The overlapping-process CSVs remain unsuitable for checkpoint comparisons.
 
 The three English rankings disagree. Validation loss favours 35,000, while ASR WER favours 5,000. At WER around 1.0 the
 metric saturates, so 1.04 versus 1.15 ranks two failures on four sentences rather than showing a meaningful quality
@@ -371,8 +382,8 @@ checkpoint is the inference result selected for this report based on my listenin
 ## 8. Test-sentence observations: English measurements and Telugu listening review
 
 I took all ten sentences from `docs/test_sentences.json`, field `final`, unmodified: E1, E2a, E2b, E3, E4 and T1, T2a,
-T2b, T3, T4. The text-processing side is measured for both languages below. My English listening results are recorded
-in Section 7.4, and the diagnostic checks are in Section 8.3. The selected Telugu inference files are in the required
+T2b, T3, T4. The text-processing side is measured for both languages below. My English listening notes and diagnostic
+checks are in Section 8.3. The selected Telugu inference files are in the required
 `Results/Telugu/test_generated_audios/` and `Results/Telugu/variance_adaptor_plots/` folders. Sentence-level listening
 notes are recorded in Section 8.2. The 5,000-step
 checkpoint had a lower validation loss of 3.73799 than the 60,000-step loss of 3.791061, but I slightly preferred
@@ -421,7 +432,7 @@ frontend, so its character counts are also its symbol counts.
 I listened to each generated sentence. The percentages below are my rough estimates of how much sounded correct; they
 are subjective impressions, not ASR scores or results from a formal listening test.
 
-| ID | Listener observation |
+| ID | My observation |
 |---|---|
 | T1 | The first 40 percent sounds good and natural. From the middle to the end, the pronunciation becomes unnatural and no longer sounds like clear Telugu. |
 | T2a | Understandable and natural overall. I would like the words to be clearer. |
@@ -434,8 +445,21 @@ not a measured quality score.
 
 ### 8.3 Tests of the English output
 
-All five English test sentences sounded wrong to me. I ran the following checks on the same checkpoints to find out
-whether the problem came from durations, the vocoder, text conditioning, prosody prediction or intelligibility.
+I listened to the five English WAVs in `Results/English/test_generated_audios/`. These are my rough impressions, not
+formal intelligibility scores or results from a listening study. E3 was the clearest; the other clips had substantial
+unclear or noisy portions.
+
+| ID | My observation |
+|---|---|
+| E1 | The opening sounds good, but overall clarity is poor. I estimate about 20% is pronounced properly; the rest is noisy and unclear. |
+| E2a | “The,” “orchestra,” “conduct” and “during” are recognizable, though noisy. I estimate about 35% sounds good; the remaining words are unclear. |
+| E2b | About half sounds somewhat better, but the other half is noisy and unclear, with words not pronounced clearly. |
+| E3 | The clearest of the five, though the speech is fast. I estimate about 80% sounds correct and clear. |
+| E4 | I can make out “10:45” and “November.” I estimate about 20% sounds correct; after that, the audio is noisy and unclear, and I cannot understand the sentence. |
+
+These percentages are my approximate judgments, not measurements. I also ran the following checks on the same
+checkpoints to investigate whether the problem came from durations, the vocoder, text conditioning, prosody prediction
+or intelligibility.
 
 | Test | Method | Result | Explanation it rules out |
 |---|---|---|---|
@@ -445,8 +469,8 @@ whether the problem came from durations, the vocoder, text conditioning, prosody
 | Variance spread | Standard deviation of the predicted normalised pitch and energy | Pitch 0.24 to 0.34, energy 0.36 to 0.45 against a ground truth of about 1.0 (0.94 measured on Telugu), at every checkpoint | Any checkpoint restoring expressiveness; all four collapse toward the mean |
 | Intelligibility | Transcribe all twenty clips with `facebook/wav2vec2-base-960h`, after validating the same stack on real speech | WER 1.04 to 1.27 (see Section 7.4); control on LibriSpeech **0.000 / 0.000 / 0.031** | The waveform being structurally sound but the probe being at fault |
 
-Three further observations point the same way. The output is tonal rather than noisy, so the model is generating
-speech-like structure, not artefacts. The predicted mel marginals are normal (median about −5.5, 99th percentile about
+Three further observations point the same way. The output retains tonal, speech-like structure despite the noisy and
+unclear portions I heard. The predicted mel marginals are normal (median about −5.5, 99th percentile about
 −0.5), so it is not emitting out-of-distribution values either. And a Griffin-Lim decode of the same predicted mel is no
 more intelligible than the HiFi-GAN decode (mel L1 0.700 to 0.740), which means the content is already wrong before the
 vocoder sees it.
@@ -460,10 +484,10 @@ the data or the training design, both of which are outside the remaining GPU bud
 negative result instead of presenting it as working speech.
 
 I kept two caveats in mind. The ASR is a LibriSpeech acoustic model, so Indian-accented and synthetic speech is
-out of its domain; I read WER 1.0 as "not recoverable" rather than as a precise word error rate. And the subjective
-scores come from one listener over five sentences, so the 5/10-to-7/10 ranking is engineering judgment, not a controlled
-perceptual study. Neither caveat weakens the diagnosis, because the control battery does not depend on either: I measured
-the vocoder, the durations and the text conditioning directly.
+out of its domain; I read WER 1.0 as "not recoverable" rather than as a precise word error rate. My subjective
+judgments come from one listener over five sentences, so neither the earlier 5/10-to-7/10 checkpoint comparison nor
+the approximate percentages above are results from a controlled perceptual study. The diagnosis also draws on the
+separate checks of the vocoder, durations and text conditioning.
 
 I also checked two frontend cases:
 
@@ -559,10 +583,12 @@ at both checkpoints, so the length regulator has never been the suspect.
 
 The two runs are the same experiment performed twice: the same reference architecture, the same pretrained HiFi-GAN
 universal vocoder, the same Noam schedule and anneal points, the same 60,000 steps, and almost the same amount of audio,
-4.842 h against 4.700 h. What differs is the corpus and the text frontend, and the outcomes differ sharply. English is
-unintelligible: WER 1.04 to 1.27 against a LibriSpeech control of 0.000, and a listener score of 7/10 for the best of four
-checkpoints. Telugu has mixed sentence-level listening results: T3 is clearest, while T1 and T4 are largely unnatural
-or noisy; its predictions also carry measurable prosodic structure (Section 9). In Sections 10.2 to 10.4, I discuss
+4.842 h against 4.700 h. What differs is the corpus and the text frontend, and the outcomes differ sharply. The English
+output is mostly unclear: WER 1.04 to 1.27 against a LibriSpeech control of 0.000. My English listening notes show mixed
+results: E3 is clearest, while the other clips have substantial noisy or unclear portions (Section 8.3). Telugu has
+mixed sentence-level listening results: T3 is clearest,
+while T1 and T4 are largely unnatural or noisy; its predictions also carry measurable prosodic structure (Section 9).
+In Sections 10.2 to 10.4, I discuss
 how the data, frontend and training budget affected these results. Section 10.5 covers the measures I could not run.
 
 ### 10.1 The two runs side by side
@@ -585,7 +611,7 @@ how the data, frontend and training budget affected these results. Section 10.5 
 | Predicted pitch σ, shipped checkpoint | 0.33 | 0.599 |
 | Predicted energy σ, shipped checkpoint | 0.44 | 0.630 |
 | ASR WER | 1.04 to 1.27 | not measurable with this probe |
-| Listening | 7/10, words missed, noise at the end | My sentence-level notes in Section 8.2; slight preference for 60,000 over 5,000 |
+| Listening | E3 clearest (about 80% by my rough estimate); other clips mostly noisy or unclear (Section 8.3) | My sentence-level notes in Section 8.2; slight preference for 60,000 over 5,000 |
 
 *Table 10.1. The three loss rows are not taken at the same step: the English values are the resumed-segment levels
 reported in Section 7.3, and the Telugu values are the step-36,000 validation tabulated in Section 7.5. The full Telugu
@@ -674,9 +700,8 @@ steps, and neither is a candidate explanation for the output quality.
 
 I do not have a Telugu intelligibility score. The probe I used for English, `facebook/wav2vec2-base-960h`, is an
 English LibriSpeech model and cannot transcribe Telugu; running it on the Telugu WAVs would produce a meaningless
-score. I did not run a Telugu ASR model. My Telugu listening notes in Section 8.2 are not directly comparable with
-the scored 5/10-to-7/10 English listening pass, and the Telugu percentages are subjective estimates, not formal
-scores.
+score. I did not run a Telugu ASR model. My English and Telugu listening notes are subjective estimates from one
+listener and are not formal scores or directly comparable language assessments.
 
 There are also limits to what I can reproduce from the files in the repository. The English prediction payloads here
 are the step-60,000 export, regenerated on CPU from the backed-up checkpoint so they match the shipped weights; the
@@ -693,16 +718,17 @@ Sorted by cause rather than by symptom:
 
 | Cause | Failure observed | What I would change |
 |---|---|---|
-| Data | English unintelligible after 213 epochs of 4.84 h across two voices; Telugu prosody memorised, pitch σ 0.599 against a corpus 0.941 | More audio per voice, or one voice. The reference recipe uses LJSpeech, about 24 h from a single speaker; 4.8 h across two voices is below what a 35-million-parameter model needs |
+| Data | English speech was mostly unclear after 213 epochs of 4.84 h across two voices; Telugu prosody memorised, pitch σ 0.599 against a corpus 0.941 | More audio per voice, or one voice. The reference recipe uses LJSpeech, about 24 h from a single speaker; 4.8 h across two voices is below what a 35-million-parameter model needs |
 | Frontend | Telugu digits unnormalised in T4; no final-syllable lengthening because characters are not phones | A number-to-words stage for Telugu, and a syllable or phone unit so conjuncts are one symbol |
 | Frontend | English OOV words get a guessed pronunciation (E1, E4 `andaroo`) | Install `g2p_en` and use the supplementary dictionary that was built but never exercised |
 | Training | Both runs overfit; Telugu validation mel bottoms at 10,000 and rises afterwards | Stop on validation mel rather than a fixed step count, and keep the checkpoint the curve selects |
 | Training | Variance adaptors collapse toward the mean in both languages | Lower the adaptor dropout or reweight the prosody losses. This is a training-design change and was not attempted |
-| Evaluation | One listener; qualitative Telugu notes and English 5/10-to-7/10 scores; English-only ASR probe | A Telugu ASR model and additional listeners before treating comparative quality as established |
+| Evaluation | One listener; subjective sentence-level estimates for both languages; English-only ASR probe | A Telugu ASR model and additional listeners before treating comparative quality as established |
 | Infrastructure | English OOM at 32,000, Telugu container restart at 36,695 | Already mitigated: atomic checkpoint writes, a free-disk pre-check, and `save_step` sized to the volume |
 
-In my listening review, the Telugu model produced a mix of clearer and poorer sentences, while the English model was
-unintelligible. The corpus and frontend differences help explain the gap; the architecture and step count were similar.
+In my listening review, the Telugu model produced a mix of clearer and poorer sentences. The English output was mostly
+unclear, although E3 was the clearest and some words in other clips were recognizable. The corpus and frontend
+differences help explain the gap; the architecture and step count were similar.
 Both models also struggled to generalise prosody beyond their training clips. I report the English result as a
 failure, not as usable speech. My preference for the 60,000-step Telugu output is subjective and is not an
 intelligibility score; the measurements in Section 9 describe its predicted durations, pitch and energy.

@@ -70,37 +70,84 @@ def read_loss_csv(path):
         for column, value in zip(LOSS_COLUMNS[1:], values):
             data[column].append(value)
 
-    if data["step"] != sorted(data["step"]):
+    if any(
+        current <= previous
+        for previous, current in zip(data["step"], data["step"][1:])
+    ):
         raise LossCsvError(
-            "{}: steps are not monotonically increasing; the CSV looks like two "
-            "runs appended together".format(path)
+            "{}: steps must be strictly increasing; the CSV may contain "
+            "duplicate or interleaved runs".format(path)
         )
     return data
+
+
+def _step_segments(steps):
+    """Return slices split wherever recorded steps skip the normal cadence."""
+    if len(steps) < 2:
+        return [(0, len(steps))], []
+
+    intervals = [current - previous for previous, current in zip(steps, steps[1:])]
+    cadence = min(intervals)
+    segments = []
+    gaps = []
+    start = 0
+    for index, interval in enumerate(intervals, start=1):
+        if interval > cadence:
+            segments.append((start, index))
+            gaps.append((steps[index - 1], steps[index]))
+            start = index
+    segments.append((start, len(steps)))
+    return segments, gaps
 
 
 def plot_losses(data, out_path, title):
     """Draw total loss and the five component losses into ``out_path``."""
     steps = data["step"]
     fig, (ax_total, ax_components) = plt.subplots(2, 1, figsize=(10, 7), sharex=True)
+    segments, gaps = _step_segments(steps)
 
-    ax_total.plot(steps, data["total_loss"], color="black", linewidth=1.5)
+    for start, end in segments:
+        ax_total.plot(
+            steps[start:end],
+            data["total_loss"][start:end],
+            color="black",
+            linewidth=1.5,
+        )
     ax_total.set_ylabel("total loss")
     ax_total.set_title(title)
     ax_total.grid(alpha=0.3)
 
     for column in COMPONENTS:
-        ax_components.plot(
-            steps,
-            data[column],
-            color=COMPONENT_COLORS[column],
-            linewidth=1.2,
-            label=column.replace("_", " "),
-        )
+        for segment_index, (start, end) in enumerate(segments):
+            ax_components.plot(
+                steps[start:end],
+                data[column][start:end],
+                color=COMPONENT_COLORS[column],
+                linewidth=1.2,
+                label=(
+                    column.replace("_", " ")
+                    if segment_index == 0
+                    else "_nolegend_"
+                ),
+            )
     ax_components.set_yscale("log")
     ax_components.set_ylabel("component loss (log)")
     ax_components.set_xlabel("training step")
     ax_components.grid(alpha=0.3)
     ax_components.legend(fontsize=8, ncol=2)
+
+    for gap_start, gap_end in gaps:
+        for axis in (ax_total, ax_components):
+            axis.axvspan(gap_start, gap_end, color="gray", alpha=0.15, zorder=0)
+        ax_total.text(
+            (gap_start + gap_end) / 2,
+            0.92,
+            "no recorded values",
+            transform=ax_total.get_xaxis_transform(),
+            ha="center",
+            va="top",
+            fontsize=8,
+        )
 
     fig.tight_layout()
     parent = os.path.dirname(out_path)

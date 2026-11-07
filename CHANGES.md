@@ -10,10 +10,13 @@ Reference commit: `d4e79eb52e8b01d24703b2dfc0385544092958f3` (2021-07-08).
 ## Current status
 
 English training finished at 60,000 steps and all five test sentences are
-synthesised. The outputs are unintelligible. I ruled the pipeline out by
-measurement, and the cause is memorisation over 213 epochs of 4.84 h of audio
-(report sections 7 and 8). Checkpoint 60,000 is the one shipped; I chose it by
-listening, at 7/10 against 5/10 for step 5,000.
+synthesised. My detailed listening notes in report section 8.3 describe mostly
+unclear clips, with E3 the clearest. I ruled the pipeline out by measurement,
+and the cause is memorisation over 213 epochs of 4.84 h of audio (report
+sections 7 and 8). Checkpoint 60,000 is the one shipped; I preferred it in an
+earlier listening comparison, at 7/10 against 5/10 for step 5,000. Those
+aggregate ratings are subjective and the new clip-by-clip notes are also rough
+estimates, not a formal listening evaluation.
 
 Telugu training completed at 60,000 steps. Validation loss among saved
 checkpoints was lowest at step 5,000 (3.73799); step 60,000 was 3.791061.
@@ -22,8 +25,8 @@ plots plus five prediction JSONs per checkpoint. The final inference set is in
 the required `Results/Telugu/` folders; the 5,000-step comparison is outside
 the repository under `../FastSpeech_Data/Telugu/`. The 35,000-step comparison
 is intentionally excluded. The console warned that no Telugu font was installed,
-so plot labels use code-point fallbacks. The user's sentence-level listening
-notes are recorded in Section 8.2 of the report; they slightly prefer 60,000
+so plot labels use code-point fallbacks. My sentence-level listening
+observations are recorded in Section 8.2 of the report; I slightly prefer 60,000
 over 5,000 but report problems in T1, T2b and T4. This is a qualitative
 single-listener review, not an ASR result or formal score.
 
@@ -34,13 +37,18 @@ Telugu inference outputs are present locally and are the only Telugu inference
 result presented in the report; the 5,000-step validation loss and prediction
 figures are reported as comparisons.
 
-Still outstanding: a Telugu intelligibility score (the English ASR probe cannot
-transcribe Telugu), checkpoint hosting, and re-running
-`scripts/check_no_overlap.py` against the final Kaggle manifests.
+The checkpoint download links are now in the root README and both checkpoint
+READMEs. I did not run Telugu ASR because the English probe cannot transcribe
+Telugu. The final train/validation manifests remain outside this repository, so
+I cannot rerun `scripts/check_no_overlap.py` against those exact files here.
 
 ## Change log
 
 ### 2026-11-07
+
+- `Results/English/training_loss.png`, `Results/English/validation_loss.png`, `Report/Technical_Report.md`, `Report/Technical_Report.pdf`, `README.md`, `scripts/plot_training_losses.py`, `scripts/tests/test_plot_training_losses.py` — Added the early loss segment recovered from PID 28091 TensorBoard event files alongside the resumed-run segment. The plots leave the unrecorded intervals blank; the report explains the separate-process provenance and does not present them as one continuous run. The plotter also breaks lines over missing cadence, shades gaps, keeps unique legend labels and rejects duplicate steps.
+  Why: The raw CSVs were interleaved by two processes, but the per-process event file preserved monotonically increasing scalar values for the early process. The evaluators should see the available evidence and the missing intervals without mistaking distinct runs for one complete 0–60,000 trajectory.
+  Verified: Imported train CSV: 256 early rows (100–25,600, cadence 100) and 300 resumed rows (30,100–60,000); validation CSV: 25 early rows (1,000–25,000, cadence 1,000) and 30 resumed rows (31,000–60,000). Early-event validation minimum is 3.8246 at step 7,000; the resumed-run value at step 60,000 is 4.0910. `python scripts/plot_training_losses.py` regenerated both English plots from the imported CSVs. `python -m pytest scripts/tests/test_plot_training_losses.py -q`: 12 passed. `python scripts/render_report_pdf.py --check`: no problems, 237 Telugu codepoints drawn, all Latin sentences present; PDF 1,199,044 bytes.
 
 - `Report/Technical_Report.md`, `Report/Technical_Report.pdf` (root) — Corrected the reproducibility paragraph and Table 10.1 to match the shipped English step-60,000 payloads: the paragraph no longer says the English payloads are from step 35,000, and the table's English spread rows now read 0.33 pitch and 0.44 energy, the mean per-sentence standard deviations of the shipped payloads, with a caption note that the Section 7.4 Kaggle A/B decode agrees to within 0.01. The prose comparison in Section 10.4 now says 0.599 against 0.33.
   Why: After the English results were regenerated at 60,000, the old paragraph claimed the payloads were the 35,000 export and the table quoted the Kaggle A/B spreads rather than the shipped ones, so the report contradicted the files in `Results/English/`.

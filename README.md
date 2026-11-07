@@ -24,29 +24,32 @@ outputs are stored separately under `../FastSpeech_Data/Telugu/`.
 | Speakers | 2 (one female, one male) | 1 (male) |
 | Dropped, by category | 260 (alignment 164, missing TextGrid 71, pitch 20, feature stats 4, transcript 1) | 94 (alignment 83, missing TextGrid 3, missing audio 8) |
 | Aligner | MFA `english_us_arpa` + G2P for 4.47 % OOV | MFA grapheme dictionary trained on the corpus |
-| Training | 60,000 steps; checkpoint 60,000 is the one shipped, picked by listening rather than by loss (7/10 against 5/10 for step 5,000); five test WAVs generated | 60,000 steps completed; checkpoint 5,000 had the lowest validation loss among saved checkpoints (3.73799); user slightly prefers the 60,000-step audio; sentence-level listening observations are in the report |
+| Training | 60,000 steps; I selected checkpoint 60,000 over step 5,000 in an earlier listening comparison (7/10 vs 5/10); my detailed review finds the English clips mostly unclear, with E3 clearest | 60,000 steps completed; checkpoint 5,000 had the lowest validation loss among saved checkpoints (3.73799); I slightly prefer the 60,000-step audio; sentence-level listening observations are in the report |
 | Audio provenance | exported at 22.05 kHz | **16 kHz source upsampled to 22.05 kHz** |
 
-**English output quality.** All five English test sentences come out
-unintelligible. The pipeline is not the cause: the vocoder reproduces the mel it
-is handed, text conditioning and durations both check out, and the same
-speech-recognition stack scores 0.000 WER on real LibriSpeech through the same
-decode path. The cause is that 4.84 h of audio was memorised over 213 epochs
-instead of generalised, and the variance adaptor collapses towards the mean.
-Report sections 7 and 8 give the measurements.
+**English output quality.** In my listening review, the English clips are
+mostly unclear; E3 is the clearest, and parts of the other clips are
+recognizable. The vocoder reproduces the mel it is given, and the
+text-conditioning and duration checks passed. The same speech-recognition
+stack scored 0.000 WER on real LibriSpeech through the same decode path. The
+measurements point to poor generalisation from 4.84 hours of two-speaker audio
+over 213 epochs, alongside a variance adaptor whose predictions collapse
+towards the mean. Sections 7 and 8 of the report give the details.
 
-Still to do before submission: Telugu ASR evaluation, checkpoint hosting, and
-re-running `scripts/check_no_overlap.py` against the final Kaggle manifests
-(disjointness was reported by the splitter when the manifests were built, but
-the check script has not been run on those files).
+**Remaining verification.** The trained checkpoints are now linked in the
+section below. I did not run a Telugu ASR evaluation. The final train/validation
+manifests are not included in this repository, so the no-overlap check cannot be
+rerun from this checkout; the report records the split checks performed when
+the manifests were built.
 
 Completed work: Phase 0 (skeleton), Phase 1 (dataset inspection), the
 pre-training infrastructure fixes (environment, training control, preprocessing
 drop accounting), alignment QC, English rule-based normalisation with rule
 provenance in the manifests, the G2P supplementary-dictionary builder, the
 variance-adaptor plot/array export in `inference.py` and the loss-CSV plotting
-script. The resumed English training and validation loss plots are in
-`Results/English/`; English inference at checkpoint step 60,000 generated five
+script. The English training and validation plots show the separately recorded
+early and resumed segments, with the missing intervals left blank; the report
+documents their provenance. English inference at checkpoint step 60,000 generated five
 WAVs plus duration, pitch, and energy plots/JSONs, so the published audio matches
 the shipped weights. The earlier 35,000-step export is kept outside the
 repository in `../FastSpeech_Data/English_Data/checkpoint_35000/`.
@@ -55,8 +58,12 @@ outputs are in the required result folders under `Results/Telugu/`.
 The 5,000-step comparison is kept outside the repository in
 `../FastSpeech_Data/Telugu/checkpoint_5000/`.
 Kaggle lacked a Telugu font, so those plots use code-point fallback labels.
-Section 7 of `Report/Technical_Report.md` discusses the English plots' scope and
-the earlier overlapping-run log limitation. `CHANGES.md` records every change.
+Section 7 of `Report/Technical_Report.md` explains the English loss figures:
+the early records (steps 100–25,600) come from a separate process's TensorBoard
+event file, while the later records (training 30,100–60,000; validation
+31,000–60,000) come from the clean resumed run. The overlapping-process CSVs
+were not used; the gap is left blank, and the two segments are not presented as
+one continuous training trajectory. `CHANGES.md` records the project changes.
 
 ## Repository layout
 
@@ -100,7 +107,7 @@ set on Kaggle. What the two training/preprocessing sessions really used:
 | Installed on top of the image | `pyworld`, `tgt`, `unidecode`, `inflect` |
 | Not installed | `g2p_en` (see "G2P dictionary for names") |
 
-The pins are also not installable on the author's Windows machine under Python
+The pins are also not installable on my Windows machine under Python
 3.14 (the pinned NumPy has no cp314 wheel); the local tests and smoke tests run
 against the local environment instead. Treat `requirements.txt` as a starting
 point to reproduce on a fresh image, and the table above as what is known to
@@ -310,9 +317,13 @@ python scripts/plot_training_losses.py \
 ```
 
 It checks the CSV header against `utils/train_utils.LOSS_COLUMNS` and refuses a
-missing column, a non-numeric value or non-monotonic steps rather than drawing a
-wrong curve. `training_loss.png` plots the total loss plus a log-scale panel of
-the five components; `validation_loss.png` does the same for the validation log.
+missing column, a non-numeric value, duplicate steps or out-of-order steps.
+When a CSV has a gap in its recorded step cadence, the plot breaks the line and
+shades the interval instead of connecting across missing data. `training_loss.png`
+plots the total loss plus a log-scale panel of the five components;
+`validation_loss.png` does the same for the validation log. The English report
+identifies the provenance of its two recorded segments and explicitly says they
+are not a single continuous run.
 
 The variance-adaptor plots (duration, pitch/F0 and energy per test sentence) are
 produced by `inference.py` itself: for every sentence it writes
@@ -322,7 +333,7 @@ can quote numbers without re-running synthesis. Pitch and energy are denormalise
 with `data/preprocessed/stats.json`; the run aborts if the config does not use
 `phoneme_level` features, because the export indexes predictions per symbol. If
 no installed font covers the Telugu code points the x labels fall back to
-`U+XXXX` and a warning is printed. The author's Windows machine does have a
+`U+XXXX` and a warning is printed. My Windows machine does have a
 Telugu font (`C:\Windows\Fonts\Nirmala.ttc`), so the figures render there; the
 Kaggle image has none, so matplotlib figures with Telugu labels must be made
 locally or with a font installed first.
@@ -331,7 +342,7 @@ locally or with a font installed first.
 
 `Report/Technical_Report.pdf` is built from the Markdown by
 `scripts/render_report_pdf.py`, which needs a Chromium-family browser and no
-other tool (the author's machine has no pandoc):
+other tool (my machine has no pandoc):
 
 ```bash
 python scripts/render_report_pdf.py --check
@@ -442,6 +453,6 @@ Model and pipeline code adapted from https://github.com/ming024/FastSpeech2
 
 ## AI assistance
 
-An AI coding assistant was used for implementation help (code copying, refactoring
-and documentation); the human author reviewed all code and results and is
-responsible for every decision and claim in the submission.
+I used an AI coding assistant for implementation help, including code copying,
+refactoring and documentation. I reviewed the code and results and am
+responsible for every decision and claim in this submission.

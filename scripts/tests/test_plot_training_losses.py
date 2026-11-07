@@ -7,6 +7,7 @@ import os
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 SCRIPTS_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, SCRIPTS_DIR)
@@ -14,6 +15,7 @@ sys.path.insert(0, SCRIPTS_DIR)
 from plot_training_losses import (  # noqa: E402
     LOSS_COLUMNS,
     LossCsvError,
+    _step_segments,
     main,
     plot_losses,
     read_loss_csv,
@@ -76,6 +78,18 @@ class ReadLossCsvTests(unittest.TestCase):
             with self.assertRaises(LossCsvError):
                 read_loss_csv(path)
 
+    def test_duplicate_steps(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_csv(
+                os.path.join(tmp, "x.csv"),
+                [
+                    (100, 8.0, 4.0, 3.0, 1.0, 0.5, 0.2),
+                    (100, 7.0, 3.5, 2.5, 0.9, 0.4, 0.1),
+                ],
+            )
+            with self.assertRaisesRegex(LossCsvError, "strictly increasing"):
+                read_loss_csv(path)
+
 
 class PlotTests(unittest.TestCase):
     def _data(self):
@@ -95,6 +109,51 @@ class PlotTests(unittest.TestCase):
             plot_losses(self._data(), out, "Telugu training loss")
             self.assertTrue(os.path.isfile(out))
             self.assertGreater(os.path.getsize(out), 1000)
+
+    def test_step_segments_leave_missing_interval_unbridged(self):
+        self.assertEqual(
+            _step_segments([100, 200, 300, 30100, 30200]),
+            ([(0, 3), (3, 5)], [(300, 30100)]),
+        )
+
+    def test_plot_gaps_are_broken_and_component_legend_is_unique(self):
+        data = {
+            "step": [100, 200, 300, 30100, 30200],
+            "total_loss": [8.0, 7.0, 6.0, 1.4, 1.3],
+            "mel_loss": [4.0, 3.5, 3.0, 0.5, 0.4],
+            "mel_postnet_loss": [3.5, 3.0, 2.5, 0.5, 0.4],
+            "pitch_loss": [1.0, 0.9, 0.8, 0.1, 0.1],
+            "energy_loss": [0.5, 0.4, 0.3, 0.05, 0.05],
+            "duration_loss": [0.2, 0.15, 0.1, 0.03, 0.03],
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            out = os.path.join(tmp, "loss.png")
+            with patch("plot_training_losses.plt.close") as close:
+                plot_losses(data, out, "training loss")
+                fig = close.call_args.args[0]
+
+            total_lines = fig.axes[0].lines
+            self.assertEqual(
+                [list(line.get_xdata()) for line in total_lines],
+                [[100, 200, 300], [30100, 30200]],
+            )
+            legend_labels = [
+                text.get_text() for text in fig.axes[1].get_legend().get_texts()
+            ]
+            self.assertEqual(
+                legend_labels,
+                [
+                    "mel loss",
+                    "mel postnet loss",
+                    "pitch loss",
+                    "energy loss",
+                    "duration loss",
+                ],
+            )
+            self.assertTrue(os.path.isfile(out))
+            import matplotlib.pyplot as plt
+
+            plt.close(fig)
 
     def test_main_writes_both_plots(self):
         with tempfile.TemporaryDirectory() as tmp:

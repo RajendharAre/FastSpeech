@@ -27,10 +27,11 @@ gives all three rankings.
 ## Other checkpoints decoded for the report
 
 Steps 5,000, 10,000, 35,000 and 60,000 were each decoded on the same five test
-sentences through the shipping HiFi-GAN vocoder. Only 60,000 is shipped. The
-prediction payloads kept in `Results/English/variance_adaptor_plots/` are the
-35,000-step export; the per-checkpoint figures at 60,000 are the Kaggle
-measurements recorded in report section 7.4.
+sentences through the shipping HiFi-GAN vocoder. Only 60,000 is shipped, and the
+WAVs and prediction payloads in `Results/English/` are that 60,000-step export,
+regenerated on CPU from the backed-up checkpoint so the published audio matches
+the weights a reader downloads. The earlier 35,000-step export is preserved
+outside the repository in `../FastSpeech_Data/English_Data/checkpoint_35000/`.
 
 ## Payload and resume
 

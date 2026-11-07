@@ -46,8 +46,11 @@ drop accounting), alignment QC, English rule-based normalisation with rule
 provenance in the manifests, the G2P supplementary-dictionary builder, the
 variance-adaptor plot/array export in `inference.py` and the loss-CSV plotting
 script. The resumed English training and validation loss plots are in
-`Results/English/`; English inference at checkpoint step 35,000 generated five
-WAVs plus duration, pitch, and energy plots/JSONs. The selected Telugu inference
+`Results/English/`; English inference at checkpoint step 60,000 generated five
+WAVs plus duration, pitch, and energy plots/JSONs, so the published audio matches
+the shipped weights. The earlier 35,000-step export is kept outside the
+repository in `../FastSpeech_Data/English_Data/checkpoint_35000/`.
+The selected Telugu inference
 outputs are in the required result folders under `Results/Telugu/`.
 The 5,000-step comparison is kept outside the repository in
 `../FastSpeech_Data/Telugu/checkpoint_5000/`.

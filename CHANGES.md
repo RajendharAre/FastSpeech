@@ -18,11 +18,14 @@ listening, at 7/10 against 5/10 for step 5,000.
 Telugu training completed at 60,000 steps. Validation loss among saved
 checkpoints was lowest at step 5,000 (3.73799); step 60,000 was 3.791061.
 Inference at steps 5,000 and 60,000 generated five WAVs and all 15 variance
-plots plus five prediction JSONs per checkpoint. Both sets are copied into
-separate folders under `Results/Telugu/`; the 35,000-step comparison is
-intentionally excluded. The console warned that no Telugu font was installed,
-so plot labels use code-point fallbacks. The user reports that the 60,000-step
-audio sounds good; a scored listening review is still outstanding.
+plots plus five prediction JSONs per checkpoint. The final inference set is in
+the required `Results/Telugu/` folders; the 5,000-step comparison is outside
+the repository under `../FastSpeech_Data/Telugu/`. The 35,000-step comparison
+is intentionally excluded. The console warned that no Telugu font was installed,
+so plot labels use code-point fallbacks. The user's sentence-level listening
+notes are recorded in Section 8.2 of the report; they slightly prefer 60,000
+over 5,000 but report problems in T1, T2b and T4. This is a qualitative
+single-listener review, not an ASR result or formal score.
 
 All eleven report sections are written. Section 9 analyses the Telugu
 variance-adaptor predictions, and section 10 compares the two languages and
@@ -32,14 +35,24 @@ result presented in the report; the 5,000-step validation loss and prediction
 figures are reported as comparisons.
 
 Still outstanding: a Telugu intelligibility score (the English ASR probe cannot
-transcribe Telugu), a scored Telugu listening pass, checkpoint hosting, and
-re-running `scripts/check_no_overlap.py` against the final Kaggle manifests.
-Three report inaccuracies found while writing section 10 are recorded in the
-change log below and are not yet corrected.
+transcribe Telugu), checkpoint hosting, and re-running
+`scripts/check_no_overlap.py` against the final Kaggle manifests.
 
 ## Change log
 
 ### 2026-11-07
+
+- `English/checkpoints/README.md`, `Telugu/checkpoints/README.md`, `README.md` (root) — Both checkpoint READMEs rewritten to one shared structure: why the weights are absent, a shipped-checkpoint table, the other checkpoints decoded for the report, the payload and resume command, the config checksum, and what to fill in once the upload is done. The root README's Checkpoints section now carries the same two-row download table instead of claiming the weights are already on the Hugging Face Hub.
+  Why: The English README still said "Hugging Face Hub URL: pending" and the Telugu one said "No checkpoint yet: the Telugu model has not been trained (Phase 5)", which is false now that both runs finished at 60,000. The assignment requires the trained checkpoints and permits an external download link, so the READMEs have to say where the link goes and what it is for.
+  Verified: `save_step` 2,500 English and 5,000 Telugu, `total_step` 60,000 in both, read from the two `config.yaml` files. `utils/train_utils.py:95-108` builds `{step, model, optimizer, rng_state}` and writes it through a `.tmp` plus `os.replace`; `checkpoint_path` at line 134 gives `<step>.pth.tar`. Both `train.py` files accept `-c` and `--config` (line 243) and both `inference.py` files accept `--config` and `--restore_step`, so every command printed in the READMEs is valid. Config sha256 prefixes computed locally: English `edb1e4dcecba631c` over 4,022 bytes, Telugu `c85ff84ca14777ee` over 4,463 bytes. The ~400 MiB size is an estimate, not a measurement: 35.1 M parameters x 4 bytes x 3 tensors for the weights plus Adam's two moment buffers gives 402.4 MiB English and 401.7 MiB Telugu, and the READMEs show that arithmetic rather than asserting a measured file size. The Telugu selection wording matches the sentence-level review now in report section 8.2, including the reported problems in T1 and T4, rather than the earlier "sounds good".
+
+- `Results/Telugu/`, `../FastSpeech_Data/Telugu/checkpoint_5000/`, `Report/Technical_Report.md`, `README.md`, `docs/AI_HANDOFF.md`, and `scripts/summarise_variance_export.py` - Moved the final Telugu WAVs and variance JSON/plots into the required root result folders with standard filenames; moved the 5,000-step comparison set outside the Git repository. Updated paths and the comparison script.
+  Why: Match the assignment's Results folder structure and keep checkpoint-specific filenames out of the final result folders.
+  Verified: Final folders contain five WAVs, five JSONs and 15 PNGs; the comparison folder outside the repo contains the 5,000-step 5 WAVs, 5 JSONs and 15 PNGs. The variance summary script reads both locations and completes.
+
+- `Report/Technical_Report.md`, `Report/Technical_Report.pdf` (root) - Recorded the user's sentence-level listening review of the Telugu 60,000-step samples, their slight preference for 60,000 over 5,000, and the limitation that this is a single listener's subjective assessment. Changed the report status to complete for the available project evidence. Corrected the input-length label in Section 8.1, the Telugu pitch-baseline interpretation in Section 7.5, and the statement about split manifests not being included in the repository.
+  Why: The assignment's generated-speech observations require per-sentence notes; the report also needed to distinguish completed observations from unavailable Telugu ASR and avoid factual inconsistencies.
+  Verified: User-provided notes captured for T1, T2a, T2b, T3, T4 and the 5,000-versus-60,000 audio comparison. Manifests checked with `git ls-files`; only `.gitkeep` placeholders are tracked. The measured Telugu pitch baseline is 0.885, so no listed validation pitch loss is below it.
 
 - `Report/Technical_Report.md`, `Report/Technical_Report.pdf` (root) — Section 10, "English vs Telugu comparison", written in place of the pending block: Table 10.1 side by side, a scale note on which losses are comparable, the parameter difference attributed to the text embedding, and subsections on what the data, the frontend and the training budget each explain, what could not be measured, and a cause-sorted limitations table. The status block and the section map now say all eleven sections are written.
   Why: Section 10 was the last pending section, and the assignment asks it to separate failures attributable to data, frontend and training budget rather than list symptoms.
@@ -49,9 +62,9 @@ change log below and are not yet corrected.
   Why: Section 10 pushed Appendix A over a page boundary and the build left a final page holding 97 characters, two table rows and nothing else.
   Verified: `python -m unittest discover -s scripts/tests` passes 56 tests, including a new one asserting a ten-row table gets the class and a twenty-row table does not. The rebuilt PDF's last page holds 781 characters, the end of section 11 plus the whole Appendix A table, instead of 97.
 
-- Three report inaccuracies found while verifying section 10, recorded here and NOT yet corrected: (1) the English rows of Table 8.1 are labelled "Symbols" but count characters of the normalised string, 108/72/75/49/115, while the model receives 85/50/56/37/81 phonemes; the Telugu rows are correct because characters and symbols coincide there. Section 10.3 states the distinction, but the Table 8.1 header still mislabels it. (2) Sections 7.4 and 7.5 use 1.0 as the predict-the-mean baseline; the measured Telugu baselines are 0.885 for pitch and 0.899 for energy, so section 7.5's "pitch is below the 1.0 baseline only at steps 1,000 and 2,000" is true against 1.0 but misleading against the measured value, since 0.9141 is above 0.885. Section 10.1 gives the correct arithmetic. (3) Section 5 says the manifests "are committed under `English/manifests/` and `Telugu/manifests/`"; `git ls-files` shows only `.gitkeep` in both, so the manifests are not in this repository.
-  Why: Each was checked against the code or the files rather than assumed, and each is a claim a reader could act on. They are logged separately so the corrections can be applied and verified one at a time.
-  Verified: (1) `len(d['symbols'])` against `len(d['text'])` in all five English payloads, and the normalised E4 string measured at 115 characters. (2) 0.941² and 0.948² against every pitch and energy value in the Section 7.5 table. (3) `git ls-files English/manifests Telugu/manifests` returns the two `.gitkeep` files only, and `.gitignore` has no manifest rule, so they were never added rather than being ignored.
+- The Section 8.1 input-length header, Section 7.5 measured pitch baseline interpretation, and Section 5 manifest availability statement were corrected after review.
+  Why: These statements previously confused character counts with English phoneme counts, used 1.0 instead of the measured Telugu pitch baseline for interpretation, and incorrectly said the run manifests were committed.
+  Verified: Section 8.1 now labels the counts as characters and lists actual English phoneme counts. Section 7.5 states the measured 0.885 baseline and that no listed pitch loss is below it. `git ls-files English/manifests Telugu/manifests` lists only `.gitkeep` placeholders.
 
 - `Results/Telugu/training_loss.png`, `Results/Telugu/validation_loss.png`, and `Report/Technical_Report.md` (root) - Added the Telugu training and validation curves for steps 0 to 60,000, with captions and interpretation in Sections 7.6 and 7.7. Renamed the supplied plot files to match the required per-language deliverable filenames.
   Why: Section 7 previously showed English curves only, despite already discussing Telugu validation values and checkpoint loss.

@@ -10,6 +10,10 @@ sys.stdout.reconfigure(encoding="utf-8")
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ROOT = os.path.join(ROOT, "Results", "Telugu")
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+EARLY_EXPORT_ROOT = os.path.join(
+    os.path.dirname(PROJECT_ROOT), "FastSpeech_Data", "Telugu", "checkpoint_5000"
+)
 HOP = 256
 SR = 22050
 GT_FRAMES_PER_SYMBOL = 6.25
@@ -18,11 +22,22 @@ GT_ENERGY_STD = 0.948
 
 
 def load(step):
-    base = os.path.join(ROOT, "checkpoint_{}".format(step), "variance_adaptor_plots")
+    if step == 60000:
+        base = os.path.join(ROOT, "variance_adaptor_plots")
+    elif step == 5000:
+        base = os.path.join(EARLY_EXPORT_ROOT, "variance_adaptor_plots")
+    else:
+        raise ValueError("unsupported comparison checkpoint: {}".format(step))
+    if not os.path.isdir(base):
+        raise FileNotFoundError(
+            "variance export for checkpoint {} not found: {}".format(step, base)
+        )
     out = {}
     for path in sorted(glob.glob(os.path.join(base, "T*.json"))):
         with open(path, encoding="utf-8") as f:
             out[os.path.basename(path)[:-5]] = json.load(f)
+    if not out:
+        raise FileNotFoundError("no Telugu prediction JSON files found in {}".format(base))
     return out
 
 
@@ -52,7 +67,7 @@ def summarise(step, rows):
 
 
 def main():
-    steps = sorted(int(p.split("_")[-1]) for p in glob.glob(os.path.join(ROOT, "checkpoint_*")))
+    steps = (5000, 60000)
     got = {}
     for step in steps:
         got[step] = summarise(step, load(step))

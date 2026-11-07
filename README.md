@@ -10,9 +10,11 @@ Two **separate** FastSpeech 2 models trained **from scratch** on two datasets:
 
 ## Status (2026-11-07)
 
-Both languages are aligned, preprocessed and trained to 60,000 steps. Telugu
-inference outputs for checkpoints 5,000 and 60,000 are in `Results/Telugu/` in
-separate folders; the 35,000-step comparison is intentionally not included.
+Both languages are aligned, preprocessed and trained to 60,000 steps. The
+selected Telugu inference outputs are in the required
+`Results/Telugu/test_generated_audios/` and
+`Results/Telugu/variance_adaptor_plots/` folders. The 5,000-step comparison
+outputs are stored separately under `../FastSpeech_Data/Telugu/`.
 
 | | English (Svarah) | Telugu (IndicTTS) |
 |---|---|---|
@@ -22,7 +24,7 @@ separate folders; the 35,000-step comparison is intentionally not included.
 | Speakers | 2 (one female, one male) | 1 (male) |
 | Dropped, by category | 260 (alignment 164, missing TextGrid 71, pitch 20, feature stats 4, transcript 1) | 94 (alignment 83, missing TextGrid 3, missing audio 8) |
 | Aligner | MFA `english_us_arpa` + G2P for 4.47 % OOV | MFA grapheme dictionary trained on the corpus |
-| Training | 60,000 steps; checkpoint 60,000 is the one shipped, picked by listening rather than by loss (7/10 against 5/10 for step 5,000); five test WAVs generated | 60,000 steps completed; checkpoint 5,000 had the lowest validation loss among saved checkpoints (3.73799); user reports the 60,000-step audio sounds good; 5,000/60,000 outputs kept separately |
+| Training | 60,000 steps; checkpoint 60,000 is the one shipped, picked by listening rather than by loss (7/10 against 5/10 for step 5,000); five test WAVs generated | 60,000 steps completed; checkpoint 5,000 had the lowest validation loss among saved checkpoints (3.73799); user slightly prefers the 60,000-step audio; sentence-level listening observations are in the report |
 | Audio provenance | exported at 22.05 kHz | **16 kHz source upsampled to 22.05 kHz** |
 
 **English output quality.** All five English test sentences come out
@@ -33,8 +35,8 @@ decode path. The cause is that 4.84 h of audio was memorised over 213 epochs
 instead of generalised, and the variance adaptor collapses towards the mean.
 Report sections 7 and 8 give the measurements.
 
-Still to do before submission: the Telugu listening review, report section 10,
-and re-running `scripts/check_no_overlap.py` against the final Kaggle manifests
+Still to do before submission: Telugu ASR evaluation, checkpoint hosting, and
+re-running `scripts/check_no_overlap.py` against the final Kaggle manifests
 (disjointness was reported by the splitter when the manifests were built, but
 the check script has not been run on those files).
 
@@ -45,8 +47,10 @@ provenance in the manifests, the G2P supplementary-dictionary builder, the
 variance-adaptor plot/array export in `inference.py` and the loss-CSV plotting
 script. The resumed English training and validation loss plots are in
 `Results/English/`; English inference at checkpoint step 35,000 generated five
-WAVs plus duration, pitch, and energy plots/JSONs. Telugu inference outputs for
-steps 5,000 and 60,000 are in separate subfolders under `Results/Telugu/`.
+WAVs plus duration, pitch, and energy plots/JSONs. The selected Telugu inference
+outputs are in the required result folders under `Results/Telugu/`.
+The 5,000-step comparison is kept outside the repository in
+`../FastSpeech_Data/Telugu/checkpoint_5000/`.
 Kaggle lacked a Telugu font, so those plots use code-point fallback labels.
 Section 7 of `Report/Technical_Report.md` discusses the English plots' scope and
 the earlier overlapping-run log limitation. `CHANGES.md` records every change.
@@ -402,12 +406,21 @@ when `markdown-it-py` is absent.
 
 ## Checkpoints
 
-Trained checkpoints are not committed. Files over 100 MB are published on the
-Hugging Face Hub and linked here (link added after training). Git LFS or an
-external download link is also allowed by the assignment; the link must remain
-accessible during evaluation.
+Trained checkpoints are not committed: each `60000.pth.tar` is about 400 MiB,
+above GitHub's 100 MB per-file limit, and `*.pth.tar` is git-ignored. The
+assignment allows either Git LFS or an accessible external download link, so the
+shipped weights are hosted externally and linked here.
+
+| Language | Shipped step | Parameters | Download |
+|---|---|---|---|
+| English | 60,000 | 35,159,617 | pending |
+| Telugu | 60,000 | 35,099,201 | pending |
+
 `English/checkpoints/README.md` and `Telugu/checkpoints/README.md` record the
-source and step of each checkpoint.
+selection rationale, the payload format, the resume command and the config
+checksum for each. The link must remain accessible during evaluation, so open it
+in a signed-out browser window and confirm it downloads the file before
+submitting.
 
 ## Vocoder
 

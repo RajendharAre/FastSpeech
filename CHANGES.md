@@ -46,6 +46,10 @@ I cannot rerun `scripts/check_no_overlap.py` against those exact files here.
 
 ### 2026-11-07
 
+- `Report/Technical_Report.md`, `Report/Technical_Report.pdf` — Updated the report's opening section map and Section 8 heading to make clear that the section includes English listening observations as well as diagnostics.
+  Why: The detailed English listening table had been added, but the opening summary still described Section 8 as English diagnostics only.
+  Verified: `python scripts/render_report_pdf.py --check` passes after rebuilding the PDF.
+
 - `Results/English/training_loss.png`, `Results/English/validation_loss.png`, `Report/Technical_Report.md`, `Report/Technical_Report.pdf`, `README.md`, `scripts/plot_training_losses.py`, `scripts/tests/test_plot_training_losses.py` — Added the early loss segment recovered from PID 28091 TensorBoard event files alongside the resumed-run segment. The plots leave the unrecorded intervals blank; the report explains the separate-process provenance and does not present them as one continuous run. The plotter also breaks lines over missing cadence, shades gaps, keeps unique legend labels and rejects duplicate steps.
   Why: The raw CSVs were interleaved by two processes, but the per-process event file preserved monotonically increasing scalar values for the early process. The evaluators should see the available evidence and the missing intervals without mistaking distinct runs for one complete 0–60,000 trajectory.
   Verified: Imported train CSV: 256 early rows (100–25,600, cadence 100) and 300 resumed rows (30,100–60,000); validation CSV: 25 early rows (1,000–25,000, cadence 1,000) and 30 resumed rows (31,000–60,000). Early-event validation minimum is 3.8246 at step 7,000; the resumed-run value at step 60,000 is 4.0910. `python scripts/plot_training_losses.py` regenerated both English plots from the imported CSVs. `python -m pytest scripts/tests/test_plot_training_losses.py -q`: 12 passed. `python scripts/render_report_pdf.py --check`: no problems, 237 Telugu codepoints drawn, all Latin sentences present; PDF 1,199,044 bytes.

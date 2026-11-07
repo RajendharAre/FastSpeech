@@ -12,7 +12,7 @@ Section map against the seven items the assignment PDF asks the report to cover:
 | Implementation approach, architecture components, modifications per language | 1, 2, 3 |
 | Dataset selection, subsampling, preprocessing, split, training configuration | 4, 5, 6 |
 | Loss-curve analysis: convergence, instability, overfitting | 7 (English and Telugu curves and checkpoint comparisons) |
-| Generated-speech observations per test sentence (pronunciation, quality) | 8 (English diagnostics and my Telugu listening notes) |
+| Generated-speech observations per test sentence (pronunciation, quality) | 8 (English listening notes and diagnostics; my Telugu listening notes) |
 | Variance-adaptor analysis (duration, F0, energy) per test sentence | 9 |
 | English vs Telugu comparison, limitations, failures, improvements | 10 (measured side-by-side, causes separated, evaluation gaps named) |
 | Reproducibility: dependencies, configs, commands | 11 |
@@ -379,7 +379,7 @@ are comparatively flat after the early steps, especially pitch and energy; neith
 improvement. Among the saved checkpoints, 5,000 has the lowest validation loss (3.73799), while the 60,000-step
 checkpoint is the inference result selected for this report based on my listening preference.
 
-## 8. Test-sentence observations: English measurements and Telugu listening review
+## 8. Test-sentence observations: English listening and diagnostics; Telugu listening review
 
 I took all ten sentences from `docs/test_sentences.json`, field `final`, unmodified: E1, E2a, E2b, E3, E4 and T1, T2a,
 T2b, T3, T4. The text-processing side is measured for both languages below. My English listening notes and diagnostic

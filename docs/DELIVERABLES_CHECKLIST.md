@@ -72,7 +72,7 @@ Supporting code copied from the reference implementation (model, transformer, te
 
 ## GitHub
 
-- [ ] Repository is public.
+- [x] Repository is public.
 - [ ] All code, results, checkpoints (or accessible links) and the report are reachable.
-- [ ] README links work without logging in.
-- [ ] Repository URL submitted through the Google Form.
+- [x] README links work without logging in.
+- [x] Repository URL submitted through the Google Form.

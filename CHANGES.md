@@ -37,12 +37,26 @@ Telugu inference outputs are present locally and are the only Telugu inference
 result presented in the report; the 5,000-step validation loss and prediction
 figures are reported as comparisons.
 
-The checkpoint download links are now in the root README and both checkpoint
-READMEs. I did not run Telugu ASR because the English probe cannot transcribe
-Telugu. The final train/validation manifests remain outside this repository, so
-I cannot rerun `scripts/check_no_overlap.py` against those exact files here.
+I submitted the repository through the assignment Google Form on 2026-11-10.
+The checkpoint download links are in the root README and both checkpoint
+READMEs, but the two Drive links currently open folders of extracted archive
+fragments rather than loadable `.pth.tar` files; replacing them with the genuine
+single files is the one deliverable still open (see the 2026-11-10 log entry).
+I did not run Telugu ASR because the English probe cannot transcribe Telugu. The
+final train/validation manifests remain outside this repository, so I cannot
+rerun `scripts/check_no_overlap.py` against those exact files here.
 
 ## Change log
+
+### 2026-11-10
+
+- `docs/DELIVERABLES_CHECKLIST.md` — Submitted the repository through the assignment Google Form. I ticked "Repository is public", "README links work without logging in" and "Repository URL submitted through the Google Form", and left "All code, results, checkpoints (or accessible links) and the report are reachable" unticked because the two hosted checkpoint links do not yet serve loadable weights (next entry).
+  Why: The form is in, but the checklist has to reflect what a grader can actually download today, not what the READMEs intend to ship.
+  Verified: I confirmed the submission on 2026-11-10. HEAD `9c4cac4` is pushed and the working tree is otherwise clean; the repository and both Drive folder pages resolve signed-out (HTTP 200). The links opening without a login is why that box is ticked; the files behind them being unusable is why the reachability box is not.
+
+- Google Drive checkpoint links (root `README.md` lines 430-431, `English/checkpoints/README.md` line 20, `Telugu/checkpoints/README.md` line 20) — Recorded that both links currently point to Drive *folders* named `english_60000.pth.tar` and `telugu_60000.pth.tar`, each holding the seven files a GUI unzip of a torch archive produces (`.data`, `data`, `data.pkl`, `version`, `byteorder`, `.format_version`, `.storage_alignment`) instead of the single `.pth.tar`. `torch.load` cannot open that layout and a Drive folder-zip does not restore the `archive/` prefix the loader expects, so the hosted checkpoints are not usable as published. Replacing them with the genuine single files is still outstanding.
+  Why: A grader who follows the README download link gets fragments, not weights, while the report and both checkpoint READMEs promise a loadable step-60,000 checkpoint. The form is already submitted, but the repository is live, so correcting the links still reaches the evaluators.
+  Verified: Fetched both folder pages signed-out on 2026-11-10 (HTTP 200); each lists exactly those seven child names and no `.pth.tar`. The genuine English checkpoint is local at `../FastSpeech_Data/English_Data/english_60000.pth.tar` (418,127,227 bytes, sha256 `d116f2cb74a9e909841c215438a7f70ed119380d2511dce7d6b7396a7265dea3`; the git-ignored copy at `English/checkpoints/60000.pth.tar` matches byte-for-byte and loads as step 60,000 / 235 tensors). The genuine Telugu checkpoint was copied to Kaggle Output `/kaggle/working/telugu_60000.pth.tar` (417,399,099 bytes, sha256 `e37bc8caab40430af080c1da80e6718c73ead1eecd5d3ebcc2f279f74016cac9`, step 60,000 / 235 tensors, measured on Kaggle); it still needs to be downloaded to the PC and uploaded to Drive as a single file.
 
 ### 2026-11-07
 
